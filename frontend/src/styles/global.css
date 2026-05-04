@@ -1,0 +1,296 @@
+/* =========================================================================
+   SAREGO — Design System
+   Aesthetic: Institutional. Editorial. Pan-African premium.
+   Palette: Ink black, antique gold, warm ivory.
+   Type:    Cormorant Garamond (display) + Inter Tight (UI) + JetBrains Mono (data)
+   ========================================================================= */
+
+:root {
+  /* Core palette */
+  --ink-950: #0b0d10;          /* deepest background */
+  --ink-900: #11141a;          /* cards on dark */
+  --ink-800: #1a1f28;          /* hovers, dividers on dark */
+  --ink-700: #262d39;          /* outlines on dark */
+  --ink-500: #4a5468;          /* muted text on dark */
+  --ink-300: #9aa3b2;          /* subtle text on dark */
+
+  --ivory-50:  #faf6ee;        /* page background, light surface */
+  --ivory-100: #f3ecdc;        /* card background light */
+  --ivory-200: #e8dcc1;        /* dividers light */
+
+  --gold-700: #8a6d2c;         /* deep accent */
+  --gold-600: #b08a3a;         /* primary gold */
+  --gold-500: #c9a74a;         /* hover gold */
+  --gold-400: #dcc068;         /* soft highlight */
+  --gold-200: #ecdca4;         /* tint */
+
+  --sage-700: #4a5d4f;         /* secondary muted accent (verification, success) */
+  --rust-600: #a3522e;         /* alerts (sparingly) */
+
+  /* Semantic */
+  --bg:           var(--ivory-50);
+  --bg-elev:     #ffffff;
+  --fg:           var(--ink-950);
+  --fg-muted:     #5a6473;
+  --border:       var(--ivory-200);
+  --accent:       var(--gold-600);
+  --accent-hover: var(--gold-500);
+
+  /* Type */
+  --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
+  --font-body:    'Inter Tight', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  /* Spacing rhythm */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+  --space-10: 64px;
+  --space-12: 96px;
+
+  /* Layout */
+  --max-w: 1320px;
+  --max-w-prose: 720px;
+}
+
+/* ----------------------------- Reset ------------------------------------ */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'ss01', 'cv11';
+}
+img, svg { display: block; max-width: 100%; }
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+/* ----------------------------- Type ------------------------------------- */
+.display, h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  line-height: 1.05;
+}
+h1 { font-size: clamp(40px, 6vw, 84px); }
+h2 { font-size: clamp(28px, 3.5vw, 48px); }
+h3 { font-size: clamp(22px, 2vw, 30px); }
+p  { margin: 0 0 1em; max-width: 68ch; }
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold-700);
+}
+
+.mono { font-family: var(--font-mono); }
+
+/* ----------------------------- Layout ----------------------------------- */
+.container {
+  width: 100%;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 var(--space-5);
+}
+
+/* ----------------------------- Buttons ---------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  transition: all 200ms ease;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.btn-primary {
+  background: var(--ink-950);
+  color: var(--ivory-50);
+  border-color: var(--ink-950);
+}
+.btn-primary:hover {
+  background: var(--gold-600);
+  border-color: var(--gold-600);
+  color: var(--ink-950);
+}
+.btn-gold {
+  background: var(--gold-600);
+  color: var(--ink-950);
+  border-color: var(--gold-600);
+}
+.btn-gold:hover {
+  background: var(--gold-500);
+  border-color: var(--gold-500);
+}
+.btn-ghost {
+  border-color: var(--ink-950);
+  color: var(--ink-950);
+}
+.btn-ghost:hover {
+  background: var(--ink-950);
+  color: var(--ivory-50);
+}
+.btn-ghost-light {
+  border-color: rgba(236, 220, 164, 0.4);
+  color: var(--ivory-50);
+}
+.btn-ghost-light:hover {
+  background: var(--gold-600);
+  border-color: var(--gold-600);
+  color: var(--ink-950);
+}
+
+/* ----------------------------- Tags / Pills ----------------------------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--ivory-200);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-muted);
+}
+.pill-dark {
+  border-color: rgba(220, 192, 104, 0.3);
+  color: var(--gold-400);
+  background: rgba(176, 138, 58, 0.08);
+}
+.pill-tier {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* ----------------------------- Cards ------------------------------------ */
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  padding: var(--space-5);
+}
+.card-dark {
+  background: var(--ink-900);
+  border-color: var(--ink-800);
+  color: var(--ivory-50);
+}
+
+/* ----------------------------- Decorative ------------------------------- */
+.gold-rule {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--gold-600) 20%, var(--gold-600) 80%, transparent);
+  border: none;
+  margin: var(--space-6) 0;
+}
+.tick-rule {
+  height: 1px;
+  background: var(--ivory-200);
+  border: none;
+}
+
+/* Subtle paper texture overlay (used on light hero) */
+.paper-grain {
+  position: relative;
+}
+.paper-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(11, 13, 16, 0.025) 1px, transparent 0);
+  background-size: 18px 18px;
+  pointer-events: none;
+  z-index: 0;
+}
+.paper-grain > * { position: relative; z-index: 1; }
+
+/* Scrollbars (subtle) */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--ivory-100); }
+::-webkit-scrollbar-thumb { background: var(--ivory-200); }
+::-webkit-scrollbar-thumb:hover { background: var(--gold-400); }
+
+/* ----------------------------- Animations -------------------------------- */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fade-up 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.fade-up-1 { animation-delay: 80ms; }
+.fade-up-2 { animation-delay: 200ms; }
+.fade-up-3 { animation-delay: 320ms; }
+.fade-up-4 { animation-delay: 440ms; }
+.fade-up-5 { animation-delay: 560ms; }
+.fade-up-6 { animation-delay: 680ms; }
+
+@keyframes pulse-gold {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+.pulse-gold {
+  animation: pulse-gold 2.6s ease-in-out infinite;
+}
+
+/* Forms */
+.input, .select, .textarea {
+  width: 100%;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  background: var(--bg-elev);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  transition: border-color 150ms ease;
+}
+.input:focus, .select:focus, .textarea:focus {
+  outline: none;
+  border-color: var(--gold-600);
+}
+.label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+/* Utilities */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: var(--space-2); }
+.gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); }
+.gap-5 { gap: var(--space-5); }
+.gap-6 { gap: var(--space-6); }
+.muted { color: var(--fg-muted); }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-sm { font-size: 13px; }
+.text-xs { font-size: 11px; }
+.uppercase { text-transform: uppercase; letter-spacing: 0.12em; }
+.italic { font-style: italic; }

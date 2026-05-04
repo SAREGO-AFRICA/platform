@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Vite
+.vite/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Coverage / testing
+coverage/
+.nyc_output/
+
+# Lockfiles policy: keep one, ignore the others
+# Keeping package-lock.json (npm) by default; uncomment if you switch:
+# package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Database dumps / local data
+*.sqlite
+*.db
+*.dump
+pgdata/
+
+# Uploads (local dev)
+uploads/
+
+# Misc
+.cache/
+tmp/
