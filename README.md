@@ -109,13 +109,14 @@ UPDATE users SET role = 'admin', trust_tier = 'institutional' WHERE email = 'you
 
 ## Roadmap (next iterations)
 
-1. **KYC document upload** — file uploader on the dashboard, S3 pre-signed URLs, admin queue UI
+1. **KYC document upload** — file uploader on the dashboard, S3 pre-signed URLs (admin queue UI is now built)
 2. ~~**Project creation flow**~~ — ✅ done. Multi-section form at `/projects/new` with draft-save and submit-for-review.
 3. **Deal rooms** — full file-share with audit log, time-bound pre-signed download URLs
 4. **Real-time messaging** — Socket.io for conversations between counterparties
-5. **Admin panel UI** — verification queue, project moderation, audit log viewer
+5. ~~**Admin panel UI**~~ — ✅ done. Full console at `/admin`: project queue, KYC queue, users, audit log, stats.
 6. **Matchmaking refinement** — tag-similarity scoring on investor mandates
 7. **i18n** — EN / FR / PT for SADC + broader Africa reach
 8. **Real Africa map** — swap the stylized SVG for proper TopoJSON-based rendering with country click-throughs
+9. **Email notifications** — when projects move statuses, when KYC outcomes are reached
 
 See `docs/ARCHITECTURE.md` for the full system design.

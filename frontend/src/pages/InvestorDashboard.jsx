@@ -141,6 +141,19 @@ export default function InvestorDashboard() {
               ? 'Your verified position on the regional pipeline. Below is the latest activity matched to your mandate.'
               : 'Your verified position on the regional pipeline. Manage your portfolio of projects below.'}
           </p>
+
+          {user.role === 'admin' && (
+            <div style={{ marginTop: 22 }}>
+              <Link
+                to="/admin"
+                className="btn btn-primary fade-up fade-up-3"
+                style={{ display: 'inline-flex' }}
+              >
+                <ShieldCheck size={14} /> Open Admin Console
+                <ArrowUpRight size={14} />
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

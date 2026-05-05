@@ -125,13 +125,34 @@ Rules-based match feed scored by sector overlap, country alignment, and ticket-s
 
 All admin routes require `role: admin`.
 
-### `GET /api/admin/verification-queue`
-### `POST /api/admin/verification/:docId`
-```json
-{ "decision": "approve", "promote_to_tier": "verified", "notes": "Docs check out." }
-```
-### `GET /api/admin/projects/pending`
-### `GET /api/admin/stats`
+### KYC verification
+- `GET /api/admin/verification-queue` — pending KYC documents with full user/org context
+- `POST /api/admin/verification/:docId` — approve or reject a KYC doc
+  ```json
+  { "decision": "approve", "promote_to_tier": "verified", "notes": "Docs check out." }
+  ```
+
+### Project moderation
+- `GET /api/admin/projects/pending` — submissions awaiting review (with sectors, owner, org)
+- `GET /api/admin/projects/:id` — admin can view any project including drafts
+- `POST /api/admin/projects/:id/review` — approve (publish) or reject (return to owner)
+  ```json
+  { "decision": "approve" }
+  { "decision": "reject", "notes": "Capital structure needs further detail..." }
+  ```
+
+### Users
+- `GET /api/admin/users?search=&tier=&role=&limit=&offset=` — paginated user list with filters
+- `PATCH /api/admin/users/:id/tier` — manually adjust a user's trust tier
+  ```json
+  { "trust_tier": "institutional", "notes": "Pre-vetted DFI partner." }
+  ```
+
+### Audit log
+- `GET /api/admin/audit-log?action=&limit=` — recent privileged actions
+
+### Stats
+- `GET /api/admin/stats` — dashboard metrics (users, projects, capital, KYC queue, etc.)
 
 ---
 
