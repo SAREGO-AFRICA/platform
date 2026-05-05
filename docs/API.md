@@ -73,6 +73,23 @@ Public detail view.
 ### `POST /api/projects/:id/publish`
 Owner submits for review (status → `pending_review`). Admin can publish directly (status → `published`).
 
+### `GET /api/projects/:id/edit` *(auth, owner or admin)*
+Returns the full project including draft state and selected sectors. Used by the project edit form.
+
+### `PUT /api/projects/:id` *(auth, owner of draft/rejected project, or admin)*
+```json
+{
+  "title": "Beira–Tete Solar Corridor",
+  "summary": "120 MW utility-scale solar PV ...",
+  "country_iso": "MZ",
+  "capital_required_usd": 180000000,
+  "expected_irr_pct": 14.5,
+  "stage": "preparation",
+  "sector_slugs": ["renewables", "energy"]
+}
+```
+Owners can edit only `draft` and `rejected` projects. Admins can edit any.
+
 ### `POST /api/projects/:id/interest` *(auth, role: investor, tier ≥ verified)*
 ```json
 { "ticket_usd": 25000000, "message": "Aligned with our renewables mandate." }

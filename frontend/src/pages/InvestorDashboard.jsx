@@ -8,6 +8,9 @@ import {
   Globe2,
   Briefcase,
   AlertCircle,
+  Plus,
+  FileText,
+  Edit3,
 } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
@@ -41,6 +44,7 @@ export default function InvestorDashboard() {
   const [user, setUser] = useState(null);
   const [mandate, setMandate] = useState(null);
   const [matches, setMatches] = useState([]);
+  const [myProjects, setMyProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -65,6 +69,13 @@ export default function InvestorDashboard() {
           if (cancelled) return;
           setMandate(mandateData);
           setMatches(matchData.matches || []);
+        }
+
+        // My projects — for project owner roles
+        const ownerRoles = ['project_developer', 'government', 'corporate', 'admin'];
+        if (ownerRoles.includes(me.user.role)) {
+          const projectsData = await api('/api/projects/mine/list').catch(() => ({ projects: [] }));
+          if (!cancelled) setMyProjects(projectsData.projects || []);
         }
       } catch (err) {
         if (err.status === 401) {
@@ -126,8 +137,9 @@ export default function InvestorDashboard() {
             .
           </h1>
           <p className="muted fade-up fade-up-2" style={{ marginTop: 14, fontSize: 16, maxWidth: 620 }}>
-            Your verified position on the regional pipeline. Below is the latest activity matched
-            to your mandate.
+            {user.role === 'investor'
+              ? 'Your verified position on the regional pipeline. Below is the latest activity matched to your mandate.'
+              : 'Your verified position on the regional pipeline. Manage your portfolio of projects below.'}
           </p>
         </div>
       </section>
@@ -147,43 +159,74 @@ export default function InvestorDashboard() {
           >
             <TrustCard tier={tier} role={user.role} />
             <MandateCard mandate={mandate} role={user.role} />
-            <ActivityCard matches={matches} />
+            <ActivityCard matches={matches} myProjects={myProjects} role={user.role} />
           </div>
         </div>
       </section>
 
-      {/* Matched pipeline */}
-      <section style={{ paddingBottom: 'var(--space-12)' }}>
-        <div className="container">
-          <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 16 }}>
-            <div>
-              <div className="eyebrow">Matched Pipeline</div>
-              <h2 style={{ marginTop: 10, fontSize: 'clamp(26px, 3vw, 38px)' }}>
-                Aligned with your{' '}
-                <span style={{ fontStyle: 'italic' }}>mandate.</span>
-              </h2>
+      {/* My Projects — only for project owner roles */}
+      {['project_developer', 'government', 'corporate', 'admin'].includes(user.role) && (
+        <section style={{ paddingBottom: 'var(--space-10)' }}>
+          <div className="container">
+            <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <div className="eyebrow">My Projects</div>
+                <h2 style={{ marginTop: 10, fontSize: 'clamp(26px, 3vw, 38px)' }}>
+                  Your <span style={{ fontStyle: 'italic' }}>portfolio.</span>
+                </h2>
+              </div>
+              <Link to="/projects/new" className="btn btn-gold">
+                <Plus size={14} /> New Project
+              </Link>
             </div>
-            <Link to="/" className="btn btn-ghost">
-              Browse All Projects <ArrowUpRight size={16} />
-            </Link>
-          </div>
 
-          {matches.length === 0 ? (
-            <EmptyMatches role={user.role} />
-          ) : (
-            <div
-              style={{
-                background: 'var(--bg-elev)',
-                border: '1px solid var(--border)',
-              }}
-            >
-              {matches.map((m, idx) => (
-                <MatchRow key={m.id} match={m} index={idx} />
-              ))}
+            {myProjects.length === 0 ? (
+              <EmptyMyProjects />
+            ) : (
+              <div style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
+                {myProjects.map((p, idx) => (
+                  <MyProjectRow key={p.id} project={p} index={idx} />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Matched pipeline — investor-only */}
+      {user.role === 'investor' && (
+        <section style={{ paddingBottom: 'var(--space-12)' }}>
+          <div className="container">
+            <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <div className="eyebrow">Matched Pipeline</div>
+                <h2 style={{ marginTop: 10, fontSize: 'clamp(26px, 3vw, 38px)' }}>
+                  Aligned with your{' '}
+                  <span style={{ fontStyle: 'italic' }}>mandate.</span>
+                </h2>
+              </div>
+              <Link to="/" className="btn btn-ghost">
+                Browse All Projects <ArrowUpRight size={16} />
+              </Link>
             </div>
-          )}
-        </div>
-      </section>
+
+            {matches.length === 0 ? (
+              <EmptyMatches role={user.role} />
+            ) : (
+              <div
+                style={{
+                  background: 'var(--bg-elev)',
+                  border: '1px solid var(--border)',
+                }}
+              >
+                {matches.map((m, idx) => (
+                  <MatchRow key={m.id} match={m} index={idx} />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <Footer />
     </div>
@@ -316,27 +359,31 @@ function MandateCard({ mandate, role }) {
   );
 }
 
-function ActivityCard({ matches }) {
-  const totalCapital = matches.reduce(
+function ActivityCard({ matches, myProjects, role }) {
+  const isInvestor = role === 'investor';
+  const items = isInvestor ? matches : myProjects;
+  const totalCapital = items.reduce(
     (sum, m) => sum + Number(m.capital_required_usd || 0),
     0
   );
+  const headlineLabel = isInvestor ? 'Matched Opportunities' : 'Projects In Portfolio';
+  const aggregateLabel = isInvestor ? 'Aggregate Pipeline' : 'Capital Across Portfolio';
   return (
     <article className="card card-dark" style={{ position: 'relative', overflow: 'hidden' }}>
       <div className="flex items-center gap-3" style={{ marginBottom: 14 }}>
         <TrendingUp size={20} color="var(--gold-400)" strokeWidth={1.4} />
         <div className="eyebrow" style={{ color: 'var(--gold-400)' }}>
-          This Week
+          {isInvestor ? 'This Week' : 'Snapshot'}
         </div>
       </div>
       <div
         className="display"
         style={{ fontSize: 56, color: 'var(--gold-400)', lineHeight: 1, fontWeight: 500, letterSpacing: '-0.02em' }}
       >
-        {matches.length}
+        {items.length}
       </div>
       <div className="text-xs uppercase" style={{ marginTop: 8, color: 'var(--ink-300)', letterSpacing: '0.14em' }}>
-        Matched Opportunities
+        {headlineLabel}
       </div>
 
       <div style={{ marginTop: 22, paddingTop: 16, borderTop: '1px solid var(--ink-800)' }}>
@@ -344,7 +391,7 @@ function ActivityCard({ matches }) {
           {formatUSD(totalCapital)}
         </div>
         <div className="text-xs uppercase" style={{ marginTop: 4, color: 'var(--ink-500)', letterSpacing: '0.14em' }}>
-          Aggregate Pipeline
+          {aggregateLabel}
         </div>
       </div>
     </article>
@@ -442,6 +489,146 @@ function EmptyMatches({ role }) {
       </p>
     </div>
   );
+}
+
+/* ============================ My Projects ============================ */
+
+const PROJECT_STATUS_BADGE = {
+  draft:          { label: 'Draft',           bg: 'var(--ivory-200)', color: 'var(--fg-muted)' },
+  pending_review: { label: 'In Review',       bg: '#fff8e8',          color: 'var(--gold-700)' },
+  published:      { label: 'Published',       bg: '#e8f0e8',          color: 'var(--sage-700)' },
+  archived:       { label: 'Archived',        bg: 'var(--ivory-200)', color: 'var(--fg-muted)' },
+  rejected:       { label: 'Returned',        bg: '#fff5ee',          color: 'var(--rust-600)' },
+};
+
+function MyProjectRow({ project, index }) {
+  const badge = PROJECT_STATUS_BADGE[project.status] || PROJECT_STATUS_BADGE.draft;
+  // Owner can edit if status is draft or rejected; otherwise view on marketplace
+  const canEdit = ['draft', 'rejected'].includes(project.status);
+  const targetUrl = canEdit
+    ? `/projects/${project.id}/edit`
+    : project.status === 'published'
+      ? `/projects/${project.slug}`
+      : `/projects/${project.id}/edit`;  // pending → still allow viewing the form (read-only state shown via banner)
+
+  return (
+    <Link
+      to={targetUrl}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '60px 1fr auto auto auto auto',
+        alignItems: 'center',
+        gap: 'var(--space-5)',
+        padding: '20px 24px',
+        borderTop: index === 0 ? 'none' : '1px solid var(--border)',
+        transition: 'background 200ms',
+        color: 'inherit',
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--ivory-100)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+      data-myproject-row
+    >
+      <div className="mono" style={{ fontSize: 12, color: 'var(--gold-700)', letterSpacing: '0.14em' }}>
+        {String(index + 1).padStart(2, '0')}
+      </div>
+
+      <div>
+        <div className="text-xs muted" style={{ marginBottom: 4 }}>
+          <span style={{ fontSize: 14 }}>{project.flag_emoji}</span> {project.country_name} · {titleCase(project.stage)}
+        </div>
+        <div style={{ fontSize: 18, fontFamily: 'var(--font-display)', fontWeight: 500, lineHeight: 1.2 }}>
+          {project.title}
+        </div>
+      </div>
+
+      <div style={{ textAlign: 'right' }} data-hide-narrow>
+        <div className="text-xs uppercase muted" style={{ letterSpacing: '0.12em' }}>Capital</div>
+        <div className="mono" style={{ fontSize: 16, marginTop: 2 }}>
+          {formatUSD(project.capital_required_usd)}
+        </div>
+      </div>
+
+      <div data-hide-narrow>
+        <span
+          style={{
+            display: 'inline-block',
+            padding: '4px 10px',
+            fontSize: 11,
+            fontWeight: 500,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            background: badge.bg,
+            color: badge.color,
+          }}
+        >
+          {badge.label}
+        </span>
+      </div>
+
+      <div className="text-xs muted" style={{ letterSpacing: '0.04em' }} data-hide-narrow>
+        {project.published_at
+          ? `Published ${formatDate(project.published_at)}`
+          : `Created ${formatDate(project.created_at)}`}
+      </div>
+
+      <div className="flex items-center gap-2" style={{ color: 'var(--ink-950)' }}>
+        {canEdit ? <Edit3 size={14} /> : <ArrowUpRight size={16} />}
+      </div>
+
+      <style>{`
+        @media (max-width: 880px) {
+          [data-myproject-row] {
+            grid-template-columns: 40px 1fr auto !important;
+          }
+          [data-hide-narrow] { display: none !important; }
+        }
+      `}</style>
+    </Link>
+  );
+}
+
+function EmptyMyProjects() {
+  return (
+    <div
+      style={{
+        background: 'var(--bg-elev)',
+        border: '1px dashed var(--ivory-200)',
+        padding: 'var(--space-8)',
+        textAlign: 'center',
+      }}
+    >
+      <FileText size={28} color="var(--gold-700)" style={{ margin: '0 auto' }} strokeWidth={1.4} />
+      <h3 style={{ marginTop: 16, fontSize: 22 }}>No projects yet.</h3>
+      <p className="muted" style={{ marginTop: 10, fontSize: 14, maxWidth: 480, marginInline: 'auto' }}>
+        Submit your first project to the regional pipeline. Drafts are private until you submit
+        them for SAREGO review.
+      </p>
+      <Link
+        to="/projects/new"
+        className="btn btn-gold"
+        style={{ marginTop: 22, display: 'inline-flex' }}
+      >
+        <Plus size={14} /> Create First Project
+      </Link>
+    </div>
+  );
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function titleCase(s) {
+  if (!s) return '—';
+  return s
+    .split(/[_\s]+/)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 /* ============================ Helpers ============================ */

@@ -110,7 +110,7 @@ UPDATE users SET role = 'admin', trust_tier = 'institutional' WHERE email = 'you
 ## Roadmap (next iterations)
 
 1. **KYC document upload** — file uploader on the dashboard, S3 pre-signed URLs, admin queue UI
-2. **Project creation flow** — multi-step form for developers/governments
+2. ~~**Project creation flow**~~ — ✅ done. Multi-section form at `/projects/new` with draft-save and submit-for-review.
 3. **Deal rooms** — full file-share with audit log, time-bound pre-signed download URLs
 4. **Real-time messaging** — Socket.io for conversations between counterparties
 5. **Admin panel UI** — verification queue, project moderation, audit log viewer

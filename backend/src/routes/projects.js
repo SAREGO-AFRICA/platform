@@ -199,6 +199,121 @@ router.post(
 );
 
 // ---------------------------------------------------------------------
+// GET /api/projects/:id/edit — owner fetches project including draft state
+// (the public GET /:slug only returns published projects)
+// ---------------------------------------------------------------------
+router.get(
+  '/:id/edit',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const r = await query(
+      `SELECT p.*, c.iso_code, c.name AS country_name,
+              COALESCE(json_agg(DISTINCT s.slug)
+                FILTER (WHERE s.id IS NOT NULL), '[]') AS sector_slugs
+       FROM projects p
+       JOIN countries c ON c.id = p.country_id
+       LEFT JOIN project_sectors ps ON ps.project_id = p.id
+       LEFT JOIN sectors s ON s.id = ps.sector_id
+       WHERE p.id = $1
+       GROUP BY p.id, c.iso_code, c.name`,
+      [req.params.id]
+    );
+    const project = r.rows[0];
+    if (!project) throw new HttpError(404, 'Project not found');
+
+    const isOwner = project.owner_user_id === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) throw new HttpError(403, 'Not allowed');
+
+    return res.json({ project });
+  })
+);
+
+// ---------------------------------------------------------------------
+// PUT /api/projects/:id — owner edits a draft (rejected projects also editable)
+// ---------------------------------------------------------------------
+router.put(
+  '/:id',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const data = createProjectSchema.parse(req.body);
+
+    const existing = await query(
+      'SELECT id, owner_user_id, status FROM projects WHERE id = $1',
+      [req.params.id]
+    );
+    const project = existing.rows[0];
+    if (!project) throw new HttpError(404, 'Project not found');
+
+    const isOwner = project.owner_user_id === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) throw new HttpError(403, 'Not allowed');
+
+    // Only draft and rejected projects can be edited by owners.
+    // Admins can edit anything.
+    if (!isAdmin && !['draft', 'rejected'].includes(project.status)) {
+      throw new HttpError(
+        400,
+        'Only draft or rejected projects can be edited. Submit a change request to update a published project.'
+      );
+    }
+
+    const result = await withTransaction(async (client) => {
+      const country = await client.query('SELECT id FROM countries WHERE iso_code = $1', [
+        data.country_iso.toUpperCase(),
+      ]);
+      if (!country.rows[0]) throw new HttpError(400, 'Unknown country ISO code');
+
+      const updated = await client.query(
+        `UPDATE projects SET
+           title = $1,
+           summary = $2,
+           description = $3,
+           country_id = $4,
+           location_text = $5,
+           latitude = $6,
+           longitude = $7,
+           capital_required_usd = $8,
+           expected_irr_pct = $9,
+           stage = $10
+         WHERE id = $11
+         RETURNING *`,
+        [
+          data.title,
+          data.summary,
+          data.description ?? null,
+          country.rows[0].id,
+          data.location_text ?? null,
+          data.latitude ?? null,
+          data.longitude ?? null,
+          data.capital_required_usd,
+          data.expected_irr_pct ?? null,
+          data.stage,
+          project.id,
+        ]
+      );
+
+      // Replace sector links
+      await client.query('DELETE FROM project_sectors WHERE project_id = $1', [project.id]);
+      const sectors = await client.query('SELECT id FROM sectors WHERE slug = ANY($1)', [
+        data.sector_slugs,
+      ]);
+      for (const s of sectors.rows) {
+        // eslint-disable-next-line no-await-in-loop
+        await client.query(
+          'INSERT INTO project_sectors (project_id, sector_id) VALUES ($1, $2)',
+          [project.id, s.id]
+        );
+      }
+
+      return updated.rows[0];
+    });
+
+    return res.json({ project: result });
+  })
+);
+
+// ---------------------------------------------------------------------
 // POST /api/projects/:id/publish — owner submits for review (or admin publishes)
 // ---------------------------------------------------------------------
 router.post(
