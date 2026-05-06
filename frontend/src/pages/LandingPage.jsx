@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -15,6 +15,7 @@ import {
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
 import AfricaMap from '../components/AfricaMap.jsx';
+import { api } from '../lib/api.js';
 
 /* ----------------------------- Demo data ------------------------------- */
 const FEATURED_PROJECTS = [
@@ -250,6 +251,26 @@ function Hero() {
 
 /* ----------------------------- PIPELINE ----------------------------------- */
 function PipelineSection() {
+  const [projects, setProjects] = useState(null);   // null = loading
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api('/api/projects?limit=3');
+        if (cancelled) return;
+        const real = (data.projects || []).map(normalizeProject);
+        // If we have at least one real published project, show real data.
+        // Otherwise, fall back to demo data so the page never looks empty.
+        setProjects(real.length > 0 ? real : FEATURED_PROJECTS);
+      } catch {
+        // On network/API failure, gracefully fall back to demo data.
+        if (!cancelled) setProjects(FEATURED_PROJECTS);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <section id="marketplace" style={{ padding: 'var(--space-12) 0' }} className="paper-grain">
       <div className="container">
@@ -274,13 +295,47 @@ function PipelineSection() {
             gap: 'var(--space-5)',
           }}
         >
-          {FEATURED_PROJECTS.map((p, idx) => (
-            <ProjectCard key={p.title} project={p} index={idx} />
+          {(projects ?? FEATURED_PROJECTS).map((p, idx) => (
+            <ProjectCard key={p.slug || p.title} project={p} index={idx} />
           ))}
         </div>
       </div>
     </section>
   );
+}
+
+/**
+ * Convert API shape into the card's expected shape.
+ * API shape:    { title, slug, country_name, flag_emoji, sectors:[{name}],
+ *                 capital_required_usd, expected_irr_pct, stage }
+ * Card shape:   { title, slug?, country, flag, sector, capital, irr, stage }
+ */
+function normalizeProject(p) {
+  return {
+    title:    p.title,
+    slug:     p.slug,
+    country:  p.country_name,
+    flag:     p.flag_emoji || '🌍',
+    sector:   Array.isArray(p.sectors) && p.sectors.length > 0
+                ? p.sectors[0].name
+                : 'Multi-sector',
+    capital:  formatUSDShort(p.capital_required_usd),
+    irr:      p.expected_irr_pct ? `${Number(p.expected_irr_pct).toFixed(1)}%` : '—',
+    stage:    titleCase(p.stage),
+  };
+}
+
+function formatUSDShort(value) {
+  const v = Number(value || 0);
+  if (v >= 1_000_000_000) return `$${(v / 1_000_000_000).toFixed(1)}B`;
+  if (v >= 1_000_000)     return `$${Math.round(v / 1_000_000)}M`;
+  if (v >= 1_000)         return `$${Math.round(v / 1_000)}K`;
+  return `$${v}`;
+}
+
+function titleCase(s) {
+  if (!s) return '—';
+  return s.split(/[_\s]+/).map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
 }
 
 function ProjectCard({ project, index }) {
@@ -362,24 +417,45 @@ function ProjectCard({ project, index }) {
         </div>
       </div>
 
-      <a
-        href="#"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '14px 22px',
-          borderTop: '1px solid var(--border)',
-          fontSize: 12,
-          letterSpacing: '0.16em',
-          textTransform: 'uppercase',
-          color: 'var(--ink-950)',
-          fontWeight: 500,
-        }}
-      >
-        Open Teaser
-        <ArrowUpRight size={14} />
-      </a>
+      {project.slug ? (
+        <Link
+          to={`/projects/${project.slug}`}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 22px',
+            borderTop: '1px solid var(--border)',
+            fontSize: 12,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: 'var(--ink-950)',
+            fontWeight: 500,
+          }}
+        >
+          Open Teaser
+          <ArrowUpRight size={14} />
+        </Link>
+      ) : (
+        <a
+          href="#"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 22px',
+            borderTop: '1px solid var(--border)',
+            fontSize: 12,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: 'var(--ink-950)',
+            fontWeight: 500,
+          }}
+        >
+          Open Teaser
+          <ArrowUpRight size={14} />
+        </a>
+      )}
     </article>
   );
 }
