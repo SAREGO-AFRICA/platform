@@ -1,0 +1,32 @@
+﻿# Render deployment config for SAREGO backend
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: sarego-api
+    runtime: node
+    region: frankfurt              # Closest free-tier region to SADC
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true              # Re-deploy on every push to main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL_DAYS
+        value: 7
+      - key: COOKIE_SECURE
+        value: "true"
+      # The values below MUST be set in Render's dashboard manually
+      # (do not commit secrets to git):
+      #   DATABASE_URL        - your Supabase pooled connection string
+      #   JWT_ACCESS_SECRET   - 64-byte hex string
+      #   JWT_REFRESH_SECRET  - 64-byte hex string (different from above)
+      #   CORS_ORIGIN         - https://sarego.africa,https://www.sarego.africa
+      #   COOKIE_DOMAIN       - .sarego.africa
