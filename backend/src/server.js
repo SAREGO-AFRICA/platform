@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -12,6 +12,7 @@ import projectRoutes from './routes/projects.js';
 import referenceRoutes from './routes/reference.js';
 import investorRoutes from './routes/investor.js';
 import adminRoutes from './routes/admin.js';
+import kycRoutes from './routes/kyc.js';
 import { errorMiddleware } from './middleware/errors.js';
 
 const app = express();
@@ -54,6 +55,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/reference', referenceRoutes);
 app.use('/api/investor', investorRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/kyc', kycRoutes);
 
 // ---------- Error handler (last) ----------
 app.use(errorMiddleware);

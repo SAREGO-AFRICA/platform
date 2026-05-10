@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import ProjectDetailPage from './pages/ProjectDetailPage.jsx';
 import ProjectFormPage from './pages/ProjectFormPage.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
+import KycPage from './pages/KycPage.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -18,7 +19,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/login" element={<LoginPage />} />
         <Route path="/dashboard" element={<InvestorDashboard />} />
         <Route path="/admin" element={<AdminPanel />} />
-        {/* Project form routes — defined BEFORE /:slug so they take priority */}
+        <Route path="/kyc" element={<KycPage />} />
+        {/* Project form routes â€” defined BEFORE /:slug so they take priority */}
         <Route path="/projects/new" element={<ProjectFormPage />} />
         <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
         <Route path="/projects/:slug" element={<ProjectDetailPage />} />
