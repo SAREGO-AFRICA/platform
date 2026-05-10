@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -24,7 +24,7 @@ const TIER_COPY = {
     color: 'var(--rust-600)',
   },
   basic: {
-    label: 'Basic Â· In Review',
+    label: 'Basic · In Review',
     body: 'Documents received. SAREGO compliance is reviewing your application.',
     color: 'var(--gold-700)',
   },
@@ -72,7 +72,7 @@ export default function InvestorDashboard() {
           setMatches(matchData.matches || []);
         }
 
-        // My projects â€” for project owner roles
+        // My projects — for project owner roles
         const ownerRoles = ['project_developer', 'government', 'corporate', 'admin'];
         if (ownerRoles.includes(me.user.role)) {
           const projectsData = await api('/api/projects/mine/list').catch(() => ({ projects: [] }));
@@ -97,7 +97,7 @@ export default function InvestorDashboard() {
       <div style={{ minHeight: '100vh', background: 'var(--ivory-50)' }}>
         <Header variant="light" />
         <div className="container" style={{ paddingTop: 80, paddingBottom: 80 }}>
-          <div className="muted text-sm">Loading dashboardâ€¦</div>
+          <div className="muted text-sm">Loading dashboard…</div>
         </div>
       </div>
     );
@@ -177,7 +177,7 @@ export default function InvestorDashboard() {
 
       <hr className="gold-rule fade-up fade-up-3" style={{ maxWidth: 1320, marginLeft: 'auto', marginRight: 'auto' }} />
 
-      {/* Top grid: Trust tier Â· Mandate Â· KPI */}
+      {/* Top grid: Trust tier · Mandate · KPI */}
       <section style={{ paddingBottom: 'var(--space-8)' }}>
         <div className="container">
           <div
@@ -195,7 +195,7 @@ export default function InvestorDashboard() {
         </div>
       </section>
 
-      {/* My Projects â€” only for project owner roles */}
+      {/* My Projects — only for project owner roles */}
       {['project_developer', 'government', 'corporate', 'admin'].includes(user.role) && (
         <section style={{ paddingBottom: 'var(--space-10)' }}>
           <div className="container">
@@ -224,7 +224,7 @@ export default function InvestorDashboard() {
         </section>
       )}
 
-      {/* Matched pipeline â€” investor-only */}
+      {/* Matched pipeline — investor-only */}
       {user.role === 'investor' && (
         <section style={{ paddingBottom: 'var(--space-12)' }}>
           <div className="container">
@@ -289,10 +289,10 @@ function TrustCard({ tier, role }) {
         {tier.body}
       </p>
       {tier.label === 'Unverified' && (
-        <a href="#" className="btn btn-primary" style={{ marginTop: 18, fontSize: 12 }}>
+        <Link to="/kyc" className="btn btn-primary" style={{ marginTop: 18, fontSize: 12 }}>
           Begin KYC
           <ArrowUpRight size={14} />
-        </a>
+        </Link>
       )}
     </article>
   );
@@ -468,7 +468,7 @@ function MatchRow({ match, index }) {
       <div style={{ textAlign: 'right' }} data-hide-narrow>
         <div className="text-xs uppercase muted" style={{ letterSpacing: '0.12em' }}>IRR</div>
         <div className="mono" style={{ fontSize: 16, marginTop: 2, color: 'var(--gold-700)' }}>
-          {match.expected_irr_pct ? `${Number(match.expected_irr_pct).toFixed(1)}%` : 'â€”'}
+          {match.expected_irr_pct ? `${Number(match.expected_irr_pct).toFixed(1)}%` : '—'}
         </div>
       </div>
 
@@ -540,7 +540,7 @@ function MyProjectRow({ project, index }) {
     ? `/projects/${project.id}/edit`
     : project.status === 'published'
       ? `/projects/${project.slug}`
-      : `/projects/${project.id}/edit`;  // pending â†’ still allow viewing the form (read-only state shown via banner)
+      : `/projects/${project.id}/edit`;  // pending → still allow viewing the form (read-only state shown via banner)
 
   return (
     <Link
@@ -565,7 +565,7 @@ function MyProjectRow({ project, index }) {
 
       <div>
         <div className="text-xs muted" style={{ marginBottom: 4 }}>
-          <span style={{ fontSize: 14 }}>{project.flag_emoji}</span> {project.country_name} Â· {titleCase(project.stage)}
+          <span style={{ fontSize: 14 }}>{project.flag_emoji}</span> {project.country_name} · {titleCase(project.stage)}
         </div>
         <div style={{ fontSize: 18, fontFamily: 'var(--font-display)', fontWeight: 500, lineHeight: 1.2 }}>
           {project.title}
@@ -646,7 +646,7 @@ function EmptyMyProjects() {
 }
 
 function formatDate(iso) {
-  if (!iso) return 'â€”';
+  if (!iso) return '—';
   return new Date(iso).toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',
@@ -655,7 +655,7 @@ function formatDate(iso) {
 }
 
 function titleCase(s) {
-  if (!s) return 'â€”';
+  if (!s) return '—';
   return s
     .split(/[_\s]+/)
     .map((w) => w[0].toUpperCase() + w.slice(1))
@@ -665,7 +665,7 @@ function titleCase(s) {
 /* ============================ Helpers ============================ */
 function formatUSD(value) {
   const v = Number(value);
-  if (!v) return '$â€”';
+  if (!v) return '$—';
   if (v >= 1_000_000_000) return `$${(v / 1_000_000_000).toFixed(1)}B`;
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(0)}M`;
   if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
@@ -673,7 +673,7 @@ function formatUSD(value) {
 }
 
 function formatTicket(min, max) {
-  if (!min && !max) return '$ â€”';
-  if (min && max) return `${formatUSD(min)} â€“ ${formatUSD(max)}`;
+  if (!min && !max) return '$ —';
+  if (min && max) return `${formatUSD(min)} – ${formatUSD(max)}`;
   return formatUSD(min || max);
 }
