@@ -851,6 +851,67 @@ function KycApplicantRow({ applicant, index, onReview }) {
   );
 }
 
+function KycViewDocButton({ docId, storageKey }) {
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const fileExtension = (() => {
+    const parts = String(storageKey || '').split('.');
+    return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : 'FILE';
+  })();
+  const fileName = (() => {
+    const parts = String(storageKey || '').split('/');
+    return parts[parts.length - 1] || 'document';
+  })();
+
+  async function handleView() {
+    setLoading(true);
+    setErr(null);
+    try {
+      const data = await api(`/api/kyc/file/${docId}`);
+      if (data.url) {
+        window.open(data.url, '_blank', 'noopener,noreferrer');
+      } else {
+        throw new Error('No URL returned by server.');
+      }
+    } catch (e) {
+      setErr(e.message || 'Failed to load document.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={handleView}
+        disabled={loading}
+        className="btn btn-ghost-light"
+        style={{
+          width: '100%',
+          justifyContent: 'space-between',
+          fontSize: 13,
+          padding: '10px 14px',
+          opacity: loading ? 0.6 : 1,
+          cursor: loading ? 'not-allowed' : 'pointer',
+        }}
+        title={fileName}
+      >
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <FileText size={14} />
+          {loading ? 'Opening...' : `View ${fileExtension}`}
+        </span>
+        <ArrowUpRight size={14} />
+      </button>
+      {err && (
+        <div style={{ fontSize: 12, marginTop: 6, color: '#f0c5a8' }}>
+          {err}
+        </div>
+      )}
+    </div>
+  );
+}
 function KycDocReviewCard({ doc, onReview }) {
   const [tier, setTier] = useState('verified');
   const [notes, setNotes] = useState('');
@@ -941,19 +1002,8 @@ function KycDocReviewCard({ doc, onReview }) {
         </select>
       </div>
       <div>
-        <label className="label" style={{ color: 'var(--ink-300)' }}>Storage key</label>
-        <div
-          className="mono text-xs"
-          style={{
-            padding: '12px 14px',
-            background: 'var(--ink-900)',
-            color: 'var(--ink-300)',
-            border: '1px solid var(--ink-800)',
-            wordBreak: 'break-all',
-          }}
-        >
-          {doc.storage_key}
-        </div>
+        <label className="label" style={{ color: 'var(--ink-300)' }}>Document file</label>
+        <KycViewDocButton docId={doc.id} storageKey={doc.storage_key} />
       </div>
       <div style={{ gridColumn: '1 / -1' }}>
         <label className="label" style={{ color: 'var(--ink-300)' }}>Notes</label>
