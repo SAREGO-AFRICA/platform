@@ -677,18 +677,6 @@ function ProjectReviewDrawer({ project, onClose, onDecide }) {
 /* =====================================================================
    KYC QUEUE
    ===================================================================== */
-function KycQueueTab()` and
-// `function KycRow(...)` blocks in AdminPanel.jsx (currently around lines
-// 680-900). Everything else in AdminPanel.jsx stays exactly as-is. The
-// helpers (`SectionHeader`, `DarkSpinner`, `ErrorBox`, `EmptyDark`,
-// `titleCase`, `formatRelative`) are reused unchanged.
-//
-// Reuses imports already present at the top of AdminPanel.jsx:
-//   ChevronRight, ShieldCheck, CheckCircle2, XCircle (lucide-react)
-//   useState, useEffect, useMemo (react)
-//   api (../lib/api.js)
-// No new imports required.
-
 function KycQueueTab() {
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
