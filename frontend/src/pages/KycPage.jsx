@@ -8,6 +8,8 @@ import {
   Clock,
   XCircle,
   ShieldCheck,
+  Loader2,
+  X,
 } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
@@ -35,15 +37,24 @@ const ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'
 
 const BASE_URL = import.meta.env.VITE_API_URL || '';
 
+// Per-row upload status: 'idle' | 'uploading' | 'success' | 'error'
+const initialSlots = () =>
+  DOCUMENT_TYPES.map((d) => ({
+    type: d.value,
+    label: d.label,
+    file: null,
+    status: 'idle',
+    message: null,
+  }));
+
 export default function KycPage() {
   const navigate = useNavigate();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [docType, setDocType] = useState('passport');
-  const [file, setFile] = useState(null);
+  const [slots, setSlots] = useState(initialSlots);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+  const [globalError, setGlobalError] = useState(null);
+  const [globalSuccess, setGlobalSuccess] = useState(null);
 
   useEffect(() => {
     if (!getAccessToken()) {
@@ -59,49 +70,64 @@ export default function KycPage() {
       const data = await api('/api/kyc/mine');
       setDocuments(data.documents || []);
     } catch (err) {
-      setError(err.message || 'Failed to load documents.');
+      setGlobalError(err.message || 'Failed to load documents.');
     } finally {
       setLoading(false);
     }
   }
 
-  function handleFileChange(e) {
-    const selected = e.target.files?.[0];
-    setError(null);
-    setSuccess(null);
+  function handleFileChange(slotIndex, fileList) {
+    const selected = fileList?.[0];
+    setGlobalError(null);
+    setGlobalSuccess(null);
+
     if (!selected) {
-      setFile(null);
+      updateSlot(slotIndex, { file: null, status: 'idle', message: null });
       return;
     }
     if (selected.size > MAX_FILE_BYTES) {
-      setError('File is larger than 10 MB.');
-      setFile(null);
+      updateSlot(slotIndex, {
+        file: null,
+        status: 'error',
+        message: 'File is larger than 10 MB.',
+      });
       return;
     }
     if (!ALLOWED_MIME.includes(selected.type)) {
-      setError('Unsupported file type. Use PDF, JPEG, PNG, or WebP.');
-      setFile(null);
+      updateSlot(slotIndex, {
+        file: null,
+        status: 'error',
+        message: 'Use PDF, JPEG, PNG, or WebP.',
+      });
       return;
     }
-    setFile(selected);
+    updateSlot(slotIndex, { file: selected, status: 'idle', message: null });
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!file) {
-      setError('Please choose a file to upload.');
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-    setSuccess(null);
+  function clearSlot(slotIndex) {
+    updateSlot(slotIndex, { file: null, status: 'idle', message: null });
+    const input = document.getElementById(`kyc-file-${slotIndex}`);
+    if (input) input.value = '';
+  }
 
+  function updateSlot(slotIndex, patch) {
+    setSlots((prev) =>
+      prev.map((s, i) => (i === slotIndex ? { ...s, ...patch } : s))
+    );
+  }
+
+  async function uploadOne(slotIndex) {
+    const slot = slots[slotIndex];
+    if (!slot.file) return { ok: true, skipped: true };
+
+    updateSlot(slotIndex, { status: 'uploading', message: null });
+
+    const formData = new FormData();
+    formData.append('file', slot.file);
+    formData.append('document_type', slot.type);
+
+    const token = getAccessToken();
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('document_type', docType);
-
-      const token = getAccessToken();
       const res = await fetch(`${BASE_URL}/api/kyc/upload`, {
         method: 'POST',
         body: formData,
@@ -118,17 +144,73 @@ export default function KycPage() {
         throw new Error(msg);
       }
 
-      setSuccess('Document submitted. SAREGO compliance will review it shortly.');
-      setFile(null);
-      const fileInput = document.getElementById('kyc-file-input');
-      if (fileInput) fileInput.value = '';
-      await loadDocuments();
+      updateSlot(slotIndex, {
+        status: 'success',
+        message: 'Submitted',
+      });
+      return { ok: true };
     } catch (err) {
-      setError(err.message || 'Upload failed.');
-    } finally {
-      setSubmitting(false);
+      updateSlot(slotIndex, {
+        status: 'error',
+        message: err.message || 'Upload failed.',
+      });
+      return { ok: false };
     }
   }
+
+  async function handleSubmitAll(e) {
+    e.preventDefault();
+    const withFiles = slots
+      .map((s, i) => ({ ...s, index: i }))
+      .filter((s) => s.file);
+
+    if (withFiles.length === 0) {
+      setGlobalError('Please choose at least one document to upload.');
+      return;
+    }
+
+    setGlobalError(null);
+    setGlobalSuccess(null);
+    setSubmitting(true);
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const slot of withFiles) {
+      const result = await uploadOne(slot.index);
+      if (result.ok && !result.skipped) successCount += 1;
+      else if (!result.ok) failCount += 1;
+    }
+
+    setSubmitting(false);
+
+    if (successCount > 0 && failCount === 0) {
+      setGlobalSuccess(
+        `${successCount} document${successCount === 1 ? '' : 's'} submitted. SAREGO compliance will review shortly.`
+      );
+    } else if (successCount > 0 && failCount > 0) {
+      setGlobalError(
+        `${successCount} succeeded, ${failCount} failed. See errors next to each document.`
+      );
+    } else if (failCount > 0) {
+      setGlobalError('Upload failed. See errors next to each document.');
+    }
+
+    // Clear successfully uploaded files from inputs and refresh list
+    setSlots((prev) =>
+      prev.map((s, i) => {
+        if (s.status === 'success') {
+          const input = document.getElementById(`kyc-file-${i}`);
+          if (input) input.value = '';
+          return { ...s, file: null };
+        }
+        return s;
+      })
+    );
+    await loadDocuments();
+  }
+
+  const selectedCount = slots.filter((s) => s.file).length;
 
   return (
     <>
@@ -156,7 +238,8 @@ export default function KycPage() {
         </div>
         <p style={{ color: 'var(--fg-muted)', fontSize: 15, lineHeight: 1.6, marginBottom: 32 }}>
           Submit identity and organisation documents to unlock the marketplace.
-          Files must be PDF, JPEG, PNG, or WebP, and under 10 MB each.
+          Choose any documents you want to submit below, then click Submit at the
+          bottom. Files must be PDF, JPEG, PNG, or WebP, and under 10 MB each.
         </p>
 
         <section
@@ -168,52 +251,23 @@ export default function KycPage() {
             marginBottom: 32,
           }}
         >
-          <h2 style={{ fontSize: 18, marginTop: 0, marginBottom: 18 }}>Upload a document</h2>
+          <h2 style={{ fontSize: 18, marginTop: 0, marginBottom: 18 }}>Upload documents</h2>
 
-          <form onSubmit={handleSubmit}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-              Document type
-            </label>
-            <select
-              value={docType}
-              onChange={(e) => setDocType(e.target.value)}
-              disabled={submitting}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                fontSize: 14,
-                borderRadius: 8,
-                border: '1px solid var(--border, #ccc)',
-                marginBottom: 18,
-                background: '#fff',
-              }}
-            >
-              {DOCUMENT_TYPES.map((d) => (
-                <option key={d.value} value={d.value}>{d.label}</option>
+          <form onSubmit={handleSubmitAll}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {slots.map((slot, idx) => (
+                <DocumentSlot
+                  key={slot.type}
+                  slot={slot}
+                  index={idx}
+                  disabled={submitting}
+                  onFileChange={(files) => handleFileChange(idx, files)}
+                  onClear={() => clearSlot(idx)}
+                />
               ))}
-            </select>
+            </div>
 
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-              File
-            </label>
-            <input
-              id="kyc-file-input"
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
-              onChange={handleFileChange}
-              disabled={submitting}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                fontSize: 14,
-                borderRadius: 8,
-                border: '1px solid var(--border, #ccc)',
-                marginBottom: 18,
-                background: '#fff',
-              }}
-            />
-
-            {error && (
+            {globalError && (
               <div
                 style={{
                   background: '#fdecea',
@@ -221,13 +275,13 @@ export default function KycPage() {
                   padding: '10px 14px',
                   borderRadius: 8,
                   fontSize: 13,
-                  marginBottom: 14,
+                  marginTop: 18,
                 }}
               >
-                {error}
+                {globalError}
               </div>
             )}
-            {success && (
+            {globalSuccess && (
               <div
                 style={{
                   background: '#e6f4ea',
@@ -235,29 +289,48 @@ export default function KycPage() {
                   padding: '10px 14px',
                   borderRadius: 8,
                   fontSize: 13,
-                  marginBottom: 14,
+                  marginTop: 18,
                 }}
               >
-                {success}
+                {globalSuccess}
               </div>
             )}
 
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={submitting || !file}
+            <div
               style={{
-                display: 'inline-flex',
+                marginTop: 22,
+                display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: 8,
-                fontSize: 14,
-                opacity: submitting || !file ? 0.6 : 1,
-                cursor: submitting || !file ? 'not-allowed' : 'pointer',
+                gap: 12,
+                flexWrap: 'wrap',
               }}
             >
-              <Upload size={14} />
-              {submitting ? 'Uploading...' : 'Submit document'}
-            </button>
+              <span style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
+                {selectedCount === 0
+                  ? 'No files selected.'
+                  : `${selectedCount} file${selectedCount === 1 ? '' : 's'} ready to upload.`}
+              </span>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={submitting || selectedCount === 0}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 14,
+                  opacity: submitting || selectedCount === 0 ? 0.6 : 1,
+                  cursor:
+                    submitting || selectedCount === 0 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {submitting ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
+                {submitting
+                  ? 'Uploading...'
+                  : `Submit ${selectedCount || ''} document${selectedCount === 1 ? '' : 's'}`.trim()}
+              </button>
+            </div>
           </form>
         </section>
 
@@ -320,8 +393,121 @@ export default function KycPage() {
             </ul>
           )}
         </section>
+
+        <style>{`
+          .spin { animation: kyc-spin 1s linear infinite; }
+          @keyframes kyc-spin { to { transform: rotate(360deg); } }
+        `}</style>
       </main>
       <Footer />
     </>
+  );
+}
+
+function DocumentSlot({ slot, index, disabled, onFileChange, onClear }) {
+  const isUploading = slot.status === 'uploading';
+  const isSuccess = slot.status === 'success';
+  const isError = slot.status === 'error';
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '180px 1fr auto',
+        alignItems: 'center',
+        gap: 12,
+        padding: '12px 14px',
+        background: isSuccess
+          ? 'rgba(30, 107, 58, 0.06)'
+          : isError
+          ? 'rgba(176, 0, 32, 0.05)'
+          : 'var(--bg-subtle, #fafafa)',
+        border: `1px solid ${
+          isSuccess
+            ? 'rgba(30, 107, 58, 0.3)'
+            : isError
+            ? 'rgba(176, 0, 32, 0.3)'
+            : 'var(--border, #e5e5e5)'
+        }`,
+        borderRadius: 8,
+      }}
+    >
+      <label
+        htmlFor={`kyc-file-${index}`}
+        style={{ fontSize: 13, fontWeight: 600 }}
+      >
+        {slot.label}
+      </label>
+
+      <div style={{ minWidth: 0 }}>
+        <input
+          id={`kyc-file-${index}`}
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+          onChange={(e) => onFileChange(e.target.files)}
+          disabled={disabled || isUploading || isSuccess}
+          style={{
+            width: '100%',
+            fontSize: 13,
+            padding: '6px 8px',
+            background: '#fff',
+            border: '1px solid var(--border, #ccc)',
+            borderRadius: 6,
+          }}
+        />
+        {slot.message && (
+          <div
+            style={{
+              fontSize: 12,
+              marginTop: 4,
+              color: isSuccess
+                ? 'var(--sage-700, #1e6b3a)'
+                : isError
+                ? 'var(--rust-600, #b00020)'
+                : 'var(--fg-muted)',
+            }}
+          >
+            {slot.message}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          width: 24,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        {isUploading && <Loader2 size={16} className="spin" style={{ color: 'var(--fg-muted)' }} />}
+        {isSuccess && <CheckCircle2 size={16} style={{ color: 'var(--sage-700)' }} />}
+        {isError && <XCircle size={16} style={{ color: 'var(--rust-600)' }} />}
+        {slot.file && slot.status === 'idle' && (
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={disabled}
+            aria-label={`Remove ${slot.label}`}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 2,
+              color: 'var(--fg-muted)',
+              display: 'inline-flex',
+            }}
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          [data-kyc-slot] { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+    </div>
   );
 }

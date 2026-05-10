@@ -677,6 +677,18 @@ function ProjectReviewDrawer({ project, onClose, onDecide }) {
 /* =====================================================================
    KYC QUEUE
    ===================================================================== */
+function KycQueueTab()` and
+// `function KycRow(...)` blocks in AdminPanel.jsx (currently around lines
+// 680-900). Everything else in AdminPanel.jsx stays exactly as-is. The
+// helpers (`SectionHeader`, `DarkSpinner`, `ErrorBox`, `EmptyDark`,
+// `titleCase`, `formatRelative`) are reused unchanged.
+//
+// Reuses imports already present at the top of AdminPanel.jsx:
+//   ChevronRight, ShieldCheck, CheckCircle2, XCircle (lucide-react)
+//   useState, useEffect, useMemo (react)
+//   api (../lib/api.js)
+// No new imports required.
+
 function KycQueueTab() {
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -705,28 +717,70 @@ function KycQueueTab() {
     await load();
   }
 
+  // Group documents by user
+  const applicants = useMemo(() => {
+    const byUser = new Map();
+    for (const doc of queue) {
+      const uid = doc.user_id;
+      if (!byUser.has(uid)) {
+        byUser.set(uid, {
+          user_id: uid,
+          full_name: doc.full_name,
+          email: doc.email,
+          role: doc.role,
+          trust_tier: doc.trust_tier,
+          organization_name: doc.organization_name,
+          country_name: doc.country_name,
+          flag_emoji: doc.flag_emoji,
+          documents: [],
+          oldest_created_at: doc.created_at,
+        });
+      }
+      const entry = byUser.get(uid);
+      entry.documents.push(doc);
+      if (doc.created_at < entry.oldest_created_at) {
+        entry.oldest_created_at = doc.created_at;
+      }
+    }
+    // Sort applicants by oldest pending document (FIFO)
+    return Array.from(byUser.values()).sort((a, b) =>
+      a.oldest_created_at < b.oldest_created_at ? -1 : 1
+    );
+  }, [queue]);
+
+  const totalDocs = queue.length;
+  const totalApplicants = applicants.length;
+
   return (
     <div>
       <SectionHeader
         title="KYC verification"
-        subtitle={`${queue.length} document${queue.length === 1 ? '' : 's'} pending review`}
+        subtitle={
+          totalDocs === 0
+            ? 'No documents pending review'
+            : `${totalApplicants} applicant${totalApplicants === 1 ? '' : 's'} · ${totalDocs} document${totalDocs === 1 ? '' : 's'} pending review`
+        }
         onRefresh={load}
       />
-
       {loading ? (
         <DarkSpinner />
       ) : err ? (
         <ErrorBox>{err}</ErrorBox>
-      ) : queue.length === 0 ? (
+      ) : applicants.length === 0 ? (
         <EmptyDark
           icon={ShieldCheck}
           title="No pending verifications"
-          body="When users submit KYC documents, they will appear here. Document upload UI is part of the next iteration."
+          body="When users submit KYC documents, they will appear here, grouped by applicant."
         />
       ) : (
         <div style={{ background: 'var(--ink-900)', border: '1px solid var(--ink-800)' }}>
-          {queue.map((doc, idx) => (
-            <KycRow key={doc.id} doc={doc} index={idx} onReview={handleReview} />
+          {applicants.map((applicant, idx) => (
+            <KycApplicantRow
+              key={applicant.user_id}
+              applicant={applicant}
+              index={idx}
+              onReview={handleReview}
+            />
           ))}
         </div>
       )}
@@ -734,28 +788,9 @@ function KycQueueTab() {
   );
 }
 
-function KycRow({ doc, index, onReview }) {
+function KycApplicantRow({ applicant, index, onReview }) {
   const [expanded, setExpanded] = useState(false);
-  const [tier, setTier] = useState('verified');
-  const [notes, setNotes] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(null);
-
-  async function decide(decision) {
-    setBusy(true);
-    setErr(null);
-    try {
-      await onReview(doc.id, {
-        decision,
-        promote_to_tier: decision === 'approve' ? tier : undefined,
-        notes: notes || undefined,
-      });
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const docCount = applicant.documents.length;
 
   return (
     <div style={{ borderTop: index === 0 ? 'none' : '1px solid var(--ink-800)' }}>
@@ -778,42 +813,38 @@ function KycRow({ doc, index, onReview }) {
         }}
         onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--ink-800)')}
         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-        data-kyc-row
+        data-kyc-applicant-row
       >
         <div className="mono" style={{ fontSize: 12, color: 'var(--gold-400)', letterSpacing: '0.14em' }}>
           {String(index + 1).padStart(2, '0')}
         </div>
-
         <div>
-          <div style={{ fontSize: 16, fontWeight: 500 }}>{doc.full_name}</div>
+          <div style={{ fontSize: 16, fontWeight: 500 }}>{applicant.full_name}</div>
           <div className="text-xs" style={{ color: 'var(--ink-300)', marginTop: 4 }}>
-            {doc.email} · {titleCase(doc.role)}
-            {doc.organization_name && <> · {doc.organization_name}</>}
+            {applicant.email} · {titleCase(applicant.role)}
+            {applicant.organization_name && <> · {applicant.organization_name}</>}
+            {applicant.flag_emoji && <> · {applicant.flag_emoji} {applicant.country_name}</>}
           </div>
         </div>
-
         <div style={{ textAlign: 'right' }} data-hide-narrow>
           <div className="text-xs" style={{ color: 'var(--ink-300)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            Document
+            Documents
           </div>
           <div className="mono" style={{ fontSize: 12, marginTop: 4, letterSpacing: '0.06em' }}>
-            {doc.document_type}
+            {docCount} pending
           </div>
         </div>
-
         <div className="text-xs" style={{ color: 'var(--ink-300)' }} data-hide-narrow>
-          {formatRelative(doc.created_at)}
+          oldest {formatRelative(applicant.oldest_created_at)}
         </div>
-
         <ChevronRight
           size={16}
           color="var(--gold-400)"
           style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 200ms' }}
         />
-
         <style>{`
           @media (max-width: 880px) {
-            [data-kyc-row] { grid-template-columns: 40px 1fr auto !important; }
+            [data-kyc-applicant-row] { grid-template-columns: 40px 1fr auto !important; }
             [data-hide-narrow] { display: none !important; }
           }
         `}</style>
@@ -821,84 +852,156 @@ function KycRow({ doc, index, onReview }) {
 
       {expanded && (
         <div style={{ padding: '0 24px 24px', background: 'var(--ink-900)' }}>
-          <div
-            style={{
-              background: 'var(--ink-950)',
-              border: '1px solid var(--ink-800)',
-              padding: 'var(--space-5)',
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 'var(--space-4)',
-            }}
-            data-kyc-form
-          >
-            <div>
-              <label className="label" style={{ color: 'var(--ink-300)' }}>Promote to tier (on approve)</label>
-              <select
-                className="select"
-                value={tier}
-                onChange={(e) => setTier(e.target.value)}
-                style={{ background: 'var(--ink-900)', color: 'var(--ivory-50)', borderColor: 'var(--ink-700)' }}
-              >
-                <option value="basic">Basic</option>
-                <option value="verified">Verified</option>
-                <option value="institutional">Institutional</option>
-              </select>
-            </div>
-            <div>
-              <label className="label" style={{ color: 'var(--ink-300)' }}>Storage key</label>
-              <div
-                className="mono text-xs"
-                style={{
-                  padding: '12px 14px',
-                  background: 'var(--ink-900)',
-                  color: 'var(--ink-300)',
-                  border: '1px solid var(--ink-800)',
-                  wordBreak: 'break-all',
-                }}
-              >
-                {doc.storage_key}
-              </div>
-            </div>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label className="label" style={{ color: 'var(--ink-300)' }}>Notes</label>
-              <textarea
-                className="textarea"
-                rows={3}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional reviewer notes…"
-                style={{
-                  background: 'var(--ink-900)',
-                  color: 'var(--ivory-50)',
-                  borderColor: 'var(--ink-700)',
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                }}
-              />
-            </div>
-            {err && (
-              <div style={{ gridColumn: '1 / -1', padding: 10, background: 'rgba(163, 82, 46, 0.15)', color: '#f0c5a8', fontSize: 13, borderLeft: '2px solid var(--rust-600)' }}>
-                {err}
-              </div>
-            )}
-            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              <button onClick={() => decide('reject')} disabled={busy} className="btn btn-ghost-light">
-                <XCircle size={14} /> Reject
-              </button>
-              <button onClick={() => decide('approve')} disabled={busy} className="btn btn-gold">
-                <CheckCircle2 size={14} /> {busy ? 'Working…' : 'Approve & Promote'}
-              </button>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            {applicant.documents.map((doc) => (
+              <KycDocReviewCard key={doc.id} doc={doc} onReview={onReview} />
+            ))}
           </div>
-
-          <style>{`
-            @media (max-width: 720px) {
-              [data-kyc-form] { grid-template-columns: 1fr !important; }
-            }
-          `}</style>
         </div>
       )}
+    </div>
+  );
+}
+
+function KycDocReviewCard({ doc, onReview }) {
+  const [tier, setTier] = useState('verified');
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const [done, setDone] = useState(null); // 'approved' | 'rejected' | null
+
+  async function decide(decision) {
+    setBusy(true);
+    setErr(null);
+    try {
+      await onReview(doc.id, {
+        decision,
+        promote_to_tier: decision === 'approve' ? tier : undefined,
+        notes: notes || undefined,
+      });
+      setDone(decision === 'approve' ? 'approved' : 'rejected');
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (done) {
+    return (
+      <div
+        style={{
+          background: 'var(--ink-950)',
+          border: '1px solid var(--ink-800)',
+          padding: 'var(--space-4)',
+          color: 'var(--ink-300)',
+          fontSize: 13,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}
+      >
+        {done === 'approved' ? (
+          <CheckCircle2 size={16} color="var(--sage-700)" />
+        ) : (
+          <XCircle size={16} color="var(--rust-600)" />
+        )}
+        <span>
+          <span className="mono">{doc.document_type}</span> {done}. Refresh to remove from queue.
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        background: 'var(--ink-950)',
+        border: '1px solid var(--ink-800)',
+        padding: 'var(--space-5)',
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 'var(--space-4)',
+      }}
+      data-kyc-form
+    >
+      <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <div className="text-xs" style={{ color: 'var(--ink-300)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            Document type
+          </div>
+          <div className="mono" style={{ fontSize: 14, marginTop: 4, color: 'var(--ivory-50)' }}>
+            {doc.document_type}
+          </div>
+        </div>
+        <div className="text-xs" style={{ color: 'var(--ink-300)' }}>
+          Submitted {formatRelative(doc.created_at)}
+        </div>
+      </div>
+
+      <div>
+        <label className="label" style={{ color: 'var(--ink-300)' }}>Promote to tier (on approve)</label>
+        <select
+          className="select"
+          value={tier}
+          onChange={(e) => setTier(e.target.value)}
+          style={{ background: 'var(--ink-900)', color: 'var(--ivory-50)', borderColor: 'var(--ink-700)' }}
+        >
+          <option value="basic">Basic</option>
+          <option value="verified">Verified</option>
+          <option value="institutional">Institutional</option>
+        </select>
+      </div>
+      <div>
+        <label className="label" style={{ color: 'var(--ink-300)' }}>Storage key</label>
+        <div
+          className="mono text-xs"
+          style={{
+            padding: '12px 14px',
+            background: 'var(--ink-900)',
+            color: 'var(--ink-300)',
+            border: '1px solid var(--ink-800)',
+            wordBreak: 'break-all',
+          }}
+        >
+          {doc.storage_key}
+        </div>
+      </div>
+      <div style={{ gridColumn: '1 / -1' }}>
+        <label className="label" style={{ color: 'var(--ink-300)' }}>Notes</label>
+        <textarea
+          className="textarea"
+          rows={3}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Optional reviewer notes..."
+          style={{
+            background: 'var(--ink-900)',
+            color: 'var(--ivory-50)',
+            borderColor: 'var(--ink-700)',
+            resize: 'vertical',
+            fontFamily: 'inherit',
+          }}
+        />
+      </div>
+      {err && (
+        <div style={{ gridColumn: '1 / -1', padding: 10, background: 'rgba(163, 82, 46, 0.15)', color: '#f0c5a8', fontSize: 13, borderLeft: '2px solid var(--rust-600)' }}>
+          {err}
+        </div>
+      )}
+      <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        <button onClick={() => decide('reject')} disabled={busy} className="btn btn-ghost-light">
+          <XCircle size={14} /> Reject
+        </button>
+        <button onClick={() => decide('approve')} disabled={busy} className="btn btn-gold">
+          <CheckCircle2 size={14} /> {busy ? 'Working...' : 'Approve & Promote'}
+        </button>
+      </div>
+      <style>{`
+        @media (max-width: 720px) {
+          [data-kyc-form] { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }
