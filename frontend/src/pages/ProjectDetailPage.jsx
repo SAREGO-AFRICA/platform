@@ -73,6 +73,7 @@ export default function ProjectDetailPage() {
 
   const sectors = Array.isArray(project.sectors) ? project.sectors : [];
   const isInvestor = user?.role === 'investor';
+  const isOwner = !!user && project.owner_user_id === user.id;
   const tierVerified = user && ['verified', 'institutional'].includes(user.trust_tier);
 
   return (
@@ -222,7 +223,9 @@ export default function ProjectDetailPage() {
               </div>
 
               <div style={{ padding: 22 }}>
-                {!user ? (
+                {isOwner ? (
+                  <SponsorInterestsPanel projectId={project.id} />
+                ) : !user ? (
                   <>
                     <p style={{ fontSize: 14, color: 'var(--ink-300)', margin: 0, lineHeight: 1.6 }}>
                       Sign in as a verified investor to express interest and request access to the deal room.
@@ -309,6 +312,256 @@ export default function ProjectDetailPage() {
   );
 }
 
+/* =========== Sponsor-side: Investor Interest panel + Open Deal Room modal =========== */
+
+function SponsorInterestsPanel({ projectId }) {
+  const [interests, setInterests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [modalInterest, setModalInterest] = useState(null);
+
+  useEffect(() => { load(); }, [projectId]);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api(`/api/projects/${projectId}/interests`);
+      setInterests(data.interests || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="eyebrow" style={{ color: 'var(--gold-400)', marginBottom: 10 }}>
+        Your Project
+      </div>
+      <h3 style={{ color: 'var(--ivory-50)', fontSize: 18, marginTop: 0, marginBottom: 10 }}>
+        Investor Interest
+      </h3>
+      <p style={{ fontSize: 13, color: 'var(--ink-300)', lineHeight: 1.6, marginBottom: 16 }}>
+        Verified investors who have signalled interest in this project. Open a deal room to share due-diligence documents.
+      </p>
+
+      {loading ? (
+        <p style={{ fontSize: 13, color: 'var(--ink-300)' }}>Loading...</p>
+      ) : error ? (
+        <p style={{ fontSize: 13, color: '#f0c5a8' }}>{error}</p>
+      ) : interests.length === 0 ? (
+        <p style={{ fontSize: 13, color: 'var(--ink-300)' }}>No interests received yet.</p>
+      ) : (
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {interests.map((i) => (
+            <SponsorInterestRow
+              key={i.id}
+              interest={i}
+              onOpen={() => setModalInterest(i)}
+            />
+          ))}
+        </ul>
+      )}
+
+      {modalInterest && (
+        <OpenDealRoomModal
+          interest={modalInterest}
+          onClose={() => setModalInterest(null)}
+          onCreated={async () => {
+            setModalInterest(null);
+            await load();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function SponsorInterestRow({ interest, onOpen }) {
+  const navigate = useNavigate();
+  const tierEligible = ['verified', 'institutional'].includes(interest.trust_tier);
+  const hasRoom = !!interest.existing_room_id;
+
+  return (
+    <li
+      style={{
+        background: 'var(--ink-950)',
+        border: '1px solid var(--ink-800)',
+        padding: 14,
+        borderRadius: 6,
+      }}
+    >
+      <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ivory-50)' }}>
+        {interest.full_name}
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--ink-300)', marginTop: 2 }}>
+        {interest.email}
+        {interest.organization_name ? ` - ${interest.organization_name}` : ''}
+      </div>
+      {interest.ticket_usd && (
+        <div style={{ fontSize: 12, color: 'var(--gold-400)', marginTop: 6 }}>
+          Ticket: ${(interest.ticket_usd / 1_000_000).toLocaleString()}M
+        </div>
+      )}
+      {interest.message && (
+        <div style={{ fontSize: 12, color: 'var(--ink-300)', marginTop: 8, fontStyle: 'italic', lineHeight: 1.5 }}>
+          "{interest.message}"
+        </div>
+      )}
+      <div style={{ marginTop: 12 }}>
+        {hasRoom ? (
+          <button
+            type="button"
+            onClick={() => navigate(`/deal-rooms/${interest.existing_room_id}`)}
+            className="btn btn-ghost-light"
+            style={{ fontSize: 12, width: '100%', justifyContent: 'center' }}
+          >
+            Open existing deal room <ArrowUpRight size={12} />
+          </button>
+        ) : !tierEligible ? (
+          <div style={{ fontSize: 11, color: 'var(--ink-300)', fontStyle: 'italic' }}>
+            Investor not yet KYC-verified.
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpen}
+            className="btn btn-gold"
+            style={{ fontSize: 12, width: '100%', justifyContent: 'center' }}
+          >
+            Open Deal Room <ArrowUpRight size={12} />
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function OpenDealRoomModal({ interest, onClose, onCreated }) {
+  const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const data = await api('/api/deal-rooms', {
+        method: 'POST',
+        body: JSON.stringify({
+          investment_interest_id: interest.id,
+          name: name.trim() || undefined,
+          description: description.trim() || undefined,
+        }),
+      });
+      if (onCreated) await onCreated();
+      if (data.room?.id) navigate(`/deal-rooms/${data.room.id}`);
+    } catch (e2) {
+      setError(e2.message || 'Failed to open deal room.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0, 0, 0, 0.7)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: 20,
+      }}
+    >
+      <form
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+        style={{
+          background: 'var(--ink-900)',
+          border: '1px solid var(--ink-800)',
+          borderRadius: 12,
+          padding: 28,
+          maxWidth: 460,
+          width: '100%',
+          color: 'var(--ivory-50)',
+        }}
+      >
+        <h3 style={{ fontSize: 20, marginTop: 0, marginBottom: 10 }}>Open Deal Room</h3>
+        <p style={{ fontSize: 13, color: 'var(--ink-300)', lineHeight: 1.6, marginBottom: 18 }}>
+          {interest.full_name} will be added as an editor and can immediately upload documents.
+        </p>
+
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--ink-300)' }}>
+          Room name (optional)
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          disabled={busy}
+          placeholder="Defaults to project title"
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            fontSize: 13,
+            borderRadius: 6,
+            border: '1px solid var(--ink-700)',
+            background: 'var(--ink-950)',
+            color: 'var(--ivory-50)',
+            marginBottom: 14,
+            fontFamily: 'inherit',
+          }}
+        />
+
+        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--ink-300)' }}>
+          Welcome note (optional)
+        </label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          disabled={busy}
+          rows={3}
+          placeholder="Any context for the investor on what to expect..."
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            fontSize: 13,
+            borderRadius: 6,
+            border: '1px solid var(--ink-700)',
+            background: 'var(--ink-950)',
+            color: 'var(--ivory-50)',
+            marginBottom: 18,
+            fontFamily: 'inherit',
+            resize: 'vertical',
+          }}
+        />
+
+        {error && (
+          <div style={{ padding: 10, background: 'rgba(163, 82, 46, 0.15)', color: '#f0c5a8', fontSize: 13, borderLeft: '2px solid var(--rust-600)', marginBottom: 14 }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button type="button" onClick={onClose} disabled={busy} className="btn btn-ghost-light" style={{ fontSize: 13 }}>
+            Cancel
+          </button>
+          <button type="submit" disabled={busy} className="btn btn-gold" style={{ fontSize: 13 }}>
+            {busy ? 'Opening...' : 'Open Deal Room'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
 /* ============================ Subcomponents ============================ */
 
 function Stat({ label, value, hint, accent }) {

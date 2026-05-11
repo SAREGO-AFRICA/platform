@@ -410,4 +410,42 @@ router.get(
   })
 );
 
+// ---------------------------------------------------------------------
+// GET /api/projects/:id/interests - sponsor lists open interests on their project
+// ---------------------------------------------------------------------
+router.get(
+  '/:id/interests',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const proj = await query(
+      `SELECT id, owner_user_id FROM projects WHERE id = $1`,
+      [req.params.id]
+    );
+    if (!proj.rows[0]) throw new HttpError(404, 'Project not found');
+    const isOwner = proj.rows[0].owner_user_id === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) throw new HttpError(403, 'Not allowed');
+
+    const r = await query(
+      `SELECT i.id, i.investor_id, i.ticket_usd, i.message, i.status, i.created_at,
+              u.full_name, u.email, u.trust_tier,
+              o.name AS organization_name,
+              (SELECT r.id
+                 FROM deal_rooms r
+                 JOIN deal_room_members m ON m.deal_room_id = r.id
+                WHERE r.project_id = i.project_id
+                  AND m.user_id = i.investor_id
+                  AND r.is_active = true
+                LIMIT 1) AS existing_room_id
+         FROM investment_interests i
+         JOIN users u ON u.id = i.investor_id
+         LEFT JOIN organizations o ON o.id = u.organization_id
+        WHERE i.project_id = $1
+        ORDER BY i.created_at DESC`,
+      [req.params.id]
+    );
+    res.json({ interests: r.rows });
+  })
+);
+
 export default router;

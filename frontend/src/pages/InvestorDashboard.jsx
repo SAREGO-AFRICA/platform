@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
+  Lock,
   ShieldCheck,
   TrendingUp,
   Target,
@@ -154,6 +155,14 @@ export default function InvestorDashboard() {
                 <ArrowUpRight size={14} />
               </Link>
             )}
+            <Link
+              to="/deal-rooms"
+              className="btn btn-ghost fade-up fade-up-3"
+              style={{ display: 'inline-flex' }}
+            >
+              <Lock size={14} /> Deal Rooms
+              <ArrowUpRight size={14} />
+            </Link>
             <button
               type="button"
               onClick={async () => {
