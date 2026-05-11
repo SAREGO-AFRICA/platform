@@ -58,3 +58,5 @@ uploads/
 # Misc
 .cache/
 tmp/
+
+*.bak
