@@ -13,6 +13,7 @@ import referenceRoutes from './routes/reference.js';
 import investorRoutes from './routes/investor.js';
 import adminRoutes from './routes/admin.js';
 import kycRoutes from './routes/kyc.js';
+import dealRoomRoutes from './routes/dealRooms.js';
 import { errorMiddleware } from './middleware/errors.js';
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/reference', referenceRoutes);
 app.use('/api/investor', investorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/kyc', kycRoutes);
+app.use('/api/deal-rooms', dealRoomRoutes);
 
 // ---------- Error handler (last) ----------
 app.use(errorMiddleware);
