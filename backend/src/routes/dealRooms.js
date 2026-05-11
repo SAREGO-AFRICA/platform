@@ -516,11 +516,7 @@ router.delete(
       console.warn('[deal-rooms] storage delete failed, removing DB row anyway:', e.message);
     }
 
-    await query(
-      `DELETE FROM deal_room_documents WHERE id = $1`,
-      [doc.id]
-    );
-
+    // Log before deleting (FK constraint requires document still exists)
     await logAccess({
       roomId: room.id,
       userId: req.user.id,
@@ -528,6 +524,11 @@ router.delete(
       documentId: doc.id,
       req,
     });
+
+    await query(
+      `DELETE FROM deal_room_documents WHERE id = $1`,
+      [doc.id]
+    );
 
     res.json({ ok: true });
   })
