@@ -111,7 +111,7 @@ router.post(
 
     const interestRes = await query(
       `SELECT i.id, i.investor_id, i.project_id, i.status,
-              p.title AS project_title, p.owner_id AS project_owner_id,
+              p.title AS project_title, p.owner_user_id AS project_owner_id,
               u.trust_tier AS investor_trust_tier
          FROM investment_interests i
          JOIN projects p ON p.id = i.project_id
