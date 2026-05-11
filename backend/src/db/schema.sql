@@ -310,7 +310,7 @@ CREATE TABLE deal_room_access_log (
   deal_room_id  UUID NOT NULL REFERENCES deal_rooms(id) ON DELETE CASCADE,
   user_id       UUID NOT NULL REFERENCES users(id),
   action        TEXT NOT NULL,         -- 'view', 'download', 'invite', 'remove'
-  document_id   UUID REFERENCES deal_room_documents(id),
+  document_id   UUID REFERENCES deal_room_documents(id) ON DELETE SET NULL,
   ip_address    INET,
   user_agent    TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
