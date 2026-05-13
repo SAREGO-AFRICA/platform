@@ -14,6 +14,7 @@ import {
   signedUrlForDealRoomDoc,
   deleteDealRoomDocument,
 } from '../utils/storage.js';
+import { email } from '../utils/email.js';
 
 const router = Router();
 
@@ -185,6 +186,32 @@ router.post(
       req,
     });
 
+    // Notify the investor that a deal room has been opened for them
+    const inviteeDataRes = await query(
+      `SELECT u.email AS investor_email, u.full_name AS investor_name,
+              sp.full_name AS sponsor_name
+         FROM users u, users sp
+        WHERE u.id =     await logAccess({
+      roomId: room.id,
+      userId: req.user.id,
+      action: 'create',
+      req,
+    }); AND sp.id = 
+
+    res.status(201).json({ room });`,
+      [interest.investor_id, req.user.id]
+    );
+    if (inviteeDataRes.rows[0]) {
+      email.dealRoomOpened({
+        to: inviteeDataRes.rows[0].investor_email,
+        investorName: inviteeDataRes.rows[0].investor_name,
+        sponsorName: inviteeDataRes.rows[0].sponsor_name,
+        projectTitle: interest.project_title,
+        roomId: room.id,
+        description,
+      });
+    }
+
     res.status(201).json({ room });
   })
 );
@@ -316,7 +343,28 @@ router.post(
       req,
     });
 
-    res.status(201).json({
+// Notify the invitee and existing members
+    const projectRes2 = await query(
+      `SELECT title FROM projects WHERE id =     res.status(201).json({
+      member: {
+        user_id: invitee.id,
+        full_name: invitee.full_name,
+        email: invitee.email,
+        room_role: role,
+      },
+    });`,
+      [room.project_id]
+    );
+    email.dealRoomMemberInvited({
+      roomId: room.id,
+      inviteeUserId: invitee.id,
+      inviteeName: invitee.full_name,
+      inviteeEmail: invitee.email,
+      inviterName: req.user.full_name || 'A team member',
+      projectTitle: projectRes2.rows[0]?.title || 'Deal room',
+    });
+
+        res.status(201).json({
       member: {
         user_id: invitee.id,
         full_name: invitee.full_name,
@@ -435,6 +483,25 @@ router.post(
       action: 'upload',
       documentId: doc.id,
       req,
+    });
+
+    // Notify other members (throttled if uploader has uploaded recently)
+    const projectRes = await query(
+      `SELECT title FROM projects WHERE id =     await logAccess({
+      roomId: room.id,
+      userId: req.user.id,
+      action: 'upload',
+      documentId: doc.id,
+      req,
+    });`,
+      [room.project_id]
+    );
+    email.dealRoomDocumentUploaded({
+      roomId: room.id,
+      uploaderUserId: req.user.id,
+      uploaderName: req.user.full_name || 'A team member',
+      documentTitle: doc.title,
+      projectTitle: projectRes.rows[0]?.title || 'Deal room',
     });
 
     res.status(201).json({ document: doc });

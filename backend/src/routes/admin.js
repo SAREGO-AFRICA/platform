@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { query } from '../db/index.js';
 import { asyncHandler, HttpError } from '../middleware/errors.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { email } from '../utils/email.js';
 
 const router = Router();
 
@@ -81,6 +82,25 @@ router.post(
         JSON.stringify({ promoted_to: data.promote_to_tier ?? null, notes: data.notes ?? null }),
       ]
     );
+
+      // Notify the user of the decision
+      const userRes = await query(
+        `SELECT u.email, u.full_name, v.document_type AS dt FROM users u JOIN verification_documents v ON v.user_id = u.id WHERE v.id = 
+        JSON.stringify({ promoted_to: data.promote_to_tier ?? null, notes: data.notes ?? null }),
+      ]
+    );`,
+        [doc.rows[0].id]
+      );
+      if (userRes.rows[0]) {
+        email.kycDecided({
+          to: userRes.rows[0].email,
+          fullName: userRes.rows[0].full_name,
+          documentType: userRes.rows[0].dt,
+          decision: data.decision,
+          notes: data.notes,
+          promotedTier: data.decision === 'approve' ? data.promote_to_tier : null,
+        });
+      }
 
     return res.json({ ok: true });
   })

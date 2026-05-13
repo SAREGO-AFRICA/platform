@@ -12,6 +12,7 @@ import {
   refreshTokenExpiryDate,
 } from '../utils/auth.js';
 import { asyncHandler, HttpError } from '../middleware/errors.js';
+import { email } from '../utils/email.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
@@ -103,6 +104,7 @@ router.post(
       return userRes.rows[0];
     });
 
+    email.welcome({ to: result.email, fullName: result.full_name, role: result.role });
     return res.status(201).json({ user: result });
   })
 );

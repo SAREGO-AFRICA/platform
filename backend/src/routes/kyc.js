@@ -1,4 +1,4 @@
-﻿// src/routes/kyc.js
+// src/routes/kyc.js
 // User-facing KYC endpoints.
 // Admins use the existing /api/admin/verification-* endpoints to review.
 
@@ -9,6 +9,7 @@ import { query } from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { asyncHandler, HttpError } from '../middleware/errors.js';
 import { uploadKycDocument, signedUrlFor } from '../utils/storage.js';
+import { email } from '../utils/email.js';
 
 const router = Router();
 
@@ -88,6 +89,7 @@ router.post(
       [req.user.id, document_type, storageKey]
     );
 
+    email.kycSubmitted({ submittedByName: req.user.full_name || req.user.email || 'A user', documentType: document_type });
     res.status(201).json({
       document: inserted.rows[0],
     });
