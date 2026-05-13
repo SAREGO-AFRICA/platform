@@ -83,12 +83,12 @@ router.post(
       ]
     );
 
-      // Notify the user of the decision
+     // Notify the user of the decision
       const userRes = await query(
-        `SELECT u.email, u.full_name, v.document_type AS dt FROM users u JOIN verification_documents v ON v.user_id = u.id WHERE v.id = 
-        JSON.stringify({ promoted_to: data.promote_to_tier ?? null, notes: data.notes ?? null }),
-      ]
-    );`,
+        `SELECT u.email, u.full_name, v.document_type AS dt
+           FROM users u
+           JOIN verification_documents v ON v.user_id = u.id
+          WHERE v.id = $1`,
         [doc.rows[0].id]
       );
       if (userRes.rows[0]) {
