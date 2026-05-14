@@ -188,7 +188,25 @@ router.post(
 
     
 
-    res.status(201).json({ room });
+  // Notify the investor that a deal room has been opened for them
+    const inviteeDataRes = await query(
+      `SELECT u.email AS investor_email, u.full_name AS investor_name,
+              sp.full_name AS sponsor_name
+         FROM users u, users sp
+        WHERE u.id = $1 AND sp.id = $2`,
+      [interest.investor_id, req.user.id]
+    );
+    if (inviteeDataRes.rows[0]) {
+      email.dealRoomOpened({
+        to: inviteeDataRes.rows[0].investor_email,
+        investorName: inviteeDataRes.rows[0].investor_name,
+        sponsorName: inviteeDataRes.rows[0].sponsor_name,
+        projectTitle: interest.project_title,
+        roomId: room.id,
+        description,
+      });
+    }
+      res.status(201).json({ room });
   })
 );
 
@@ -321,7 +339,20 @@ router.post(
 
 
 
-        res.status(201).json({
+        // Notify the invitee and existing members
+    const projectRes2 = await query(
+      `SELECT title FROM projects WHERE id = $1`,
+      [room.project_id]
+    );
+    email.dealRoomMemberInvited({
+      roomId: room.id,
+      inviteeUserId: invitee.id,
+      inviteeName: invitee.full_name,
+      inviteeEmail: invitee.email,
+      inviterName: req.user.full_name || 'A team member',
+      projectTitle: projectRes2.rows[0]?.title || 'Deal room',
+    });
+    res.status(201).json({
       member: {
         user_id: invitee.id,
         full_name: invitee.full_name,
@@ -443,6 +474,18 @@ router.post(
     });
 
 
+    // Notify other members (throttled if uploader has uploaded recently)
+    const projectRes = await query(
+      `SELECT title FROM projects WHERE id = $1`,
+      [room.project_id]
+    );
+    email.dealRoomDocumentUploaded({
+      roomId: room.id,
+      uploaderUserId: req.user.id,
+      uploaderName: req.user.full_name || 'A team member',
+      documentTitle: doc.title,
+      projectTitle: projectRes.rows[0]?.title || 'Deal room',
+    });
     res.status(201).json({ document: doc });
   })
 );

@@ -385,6 +385,31 @@ router.post(
        RETURNING *`,
       [req.user.id, project.rows[0].id, data.ticket_usd ?? null, data.message ?? null]
     );
+    // Notify project owner of the interest
+      const ownerDataRes = await query(
+        `SELECT p.title, p.slug, ow.full_name AS owner_name, ow.email AS owner_email,
+                inv.full_name AS investor_name, org.name AS investor_org
+           FROM projects p
+           JOIN users ow ON ow.id = p.owner_user_id
+           JOIN users inv ON inv.id = $1
+           LEFT JOIN organizations org ON org.id = inv.organization_id
+          WHERE p.id = $2`,
+        [req.user.id, project.rows[0].id]
+      );
+      const od = ownerDataRes.rows[0];
+      if (od) {
+        email.interestExpressed({
+          to: od.owner_email,
+          ownerName: od.owner_name,
+          investorName: od.investor_name,
+          investorOrg: od.investor_org,
+          projectTitle: od.title,
+          projectSlug: od.slug,
+          ticketUsd: data.ticket_usd,
+          message: data.message,
+        });
+      }
+      return res.status(201).json({ interest: inserted.rows[0] });
       
   })
 );
