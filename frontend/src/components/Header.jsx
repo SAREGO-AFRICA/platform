@@ -1,12 +1,37 @@
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, LogOut } from 'lucide-react';
 import { SaregoMark } from './Brand.jsx';
+import { getAccessToken, setAccessToken } from '../lib/api.js';
 
 export default function Header({ variant = 'light' }) {
   const [open, setOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const isDark = variant === 'dark';
+
+  useEffect(() => {
+    // Re-check auth state on every route change so the header stays in sync
+    setSignedIn(!!getAccessToken());
+  }, [pathname]);
+
+  async function handleSignOut() {
+    // Best-effort server-side logout (revokes refresh token); ignore failures
+    try {
+      const BASE_URL = import.meta.env.VITE_API_URL || '';
+      await fetch(`${BASE_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      /* ignore */
+    }
+    setAccessToken(null);
+    setSignedIn(false);
+    setOpen(false);
+    navigate('/');
+  }
 
   const links = [
     { href: '/#marketplace', label: 'Marketplace' },
@@ -62,12 +87,30 @@ export default function Header({ variant = 'light' }) {
         </nav>
 
         <div className="flex items-center gap-3" data-desktop-actions>
-          <Link to="/login" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
-            Sign In
-          </Link>
-          <Link to="/login?mode=register" className="btn btn-gold">
-            Request Access
-          </Link>
+          {signedIn ? (
+            <>
+              <Link to="/dashboard" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
+                Dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="btn btn-gold"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <LogOut size={14} /> Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
+                Sign In
+              </Link>
+              <Link to="/login?mode=register" className="btn btn-gold">
+                Request Access
+              </Link>
+            </>
+          )}
         </div>
 
         <button
@@ -111,17 +154,50 @@ export default function Header({ variant = 'light' }) {
             </a>
           ))}
           <div className="flex gap-3" style={{ marginTop: 16 }}>
-            <Link to="/login" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`} style={{ flex: 1 }}>
-              Sign In
-            </Link>
-            <Link to="/login?mode=register" className="btn btn-gold" style={{ flex: 1 }}>
-              Request Access
-            </Link>
+            {signedIn ? (
+              <>
+                <Link
+                  to="/dashboard"
+                  onClick={() => setOpen(false)}
+                  className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}
+                  style={{ flex: 1 }}
+                >
+                  Dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="btn btn-gold"
+                  style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  <LogOut size={14} /> Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  onClick={() => setOpen(false)}
+                  className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}
+                  style={{ flex: 1 }}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/login?mode=register"
+                  onClick={() => setOpen(false)}
+                  className="btn btn-gold"
+                  style={{ flex: 1 }}
+                >
+                  Request Access
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}
 
-      {/* Inline responsive tweak — nav visibility */}
+      {/* Inline responsive tweak - nav visibility */}
       <style>{`
         @media (min-width: 880px) {
           [data-desktop-nav]    { display: flex !important; }
