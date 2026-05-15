@@ -1,4 +1,5 @@
 import { verifyAccessToken } from '../utils/auth.js';
+import { query } from '../db/index.js';
 
 /**
  * Requires a valid access token. Populates req.user = { id, role, tier }.
@@ -38,18 +39,31 @@ export function requireRole(...allowedRoles) {
 
 /**
  * Requires that the user has reached at least a given trust tier.
- * Useful for gating deal-room creation, messaging, etc.
+ * Reads trust_tier from the DB (not JWT) so KYC promotions apply immediately
+ * without requiring the user to log out and log back in.
  */
 const TIER_RANK = { unverified: 0, basic: 1, verified: 2, institutional: 3 };
-
 export function requireTrustTier(minTier) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
-    if ((TIER_RANK[req.user.tier] ?? 0) < (TIER_RANK[minTier] ?? 0)) {
-      return res
-        .status(403)
-        .json({ error: `Action requires ${minTier} verification tier. Complete KYC to proceed.` });
+    try {
+      const r = await query(`SELECT trust_tier FROM users WHERE id = $1`, [req.user.id]);
+      const liveTier = r.rows[0]?.trust_tier ?? req.user.tier;
+      req.user.tier = liveTier;
+      if ((TIER_RANK[liveTier] ?? 0) < (TIER_RANK[minTier] ?? 0)) {
+        return res
+          .status(403)
+          .json({ error: `Action requires ${minTier} verification tier. Complete KYC to proceed.` });
+      }
+      return next();
+    } catch (err) {
+      // On DB error, fall back to JWT tier (don't lock out users)
+      if ((TIER_RANK[req.user.tier] ?? 0) < (TIER_RANK[minTier] ?? 0)) {
+        return res
+          .status(403)
+          .json({ error: `Action requires ${minTier} verification tier. Complete KYC to proceed.` });
+      }
+      return next();
     }
-    return next();
   };
 }
