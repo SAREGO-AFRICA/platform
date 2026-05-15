@@ -31,7 +31,7 @@ async function send({ to, subject, html, text }) {
     const result = await _resend.emails.send({
       from: FROM_EMAIL,
       to: Array.isArray(to) ? to : [to],
-      reply_to: REPLY_TO,
+      replyTo: REPLY_TO,
       subject,
       html,
       text: text || stripHtml(html),
