@@ -35,7 +35,7 @@ async function computeStats() {
     // Active countries = distinct country_iso across all opportunity tables + projects
     query(`
       SELECT count(DISTINCT iso)::int AS c FROM (
-        SELECT country_iso AS iso FROM projects WHERE status = 'published'
+        SELECT c.iso_code AS iso FROM projects p JOIN countries c ON c.id = p.country_id WHERE p.status = 'published'
         UNION SELECT country_iso FROM commodity_requests WHERE status = 'published'
         UNION SELECT country_iso FROM logistics_loads WHERE status = 'published'
         UNION SELECT country_iso FROM agri_offtake_requests WHERE status = 'published'
