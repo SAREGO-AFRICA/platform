@@ -1,7 +1,5 @@
 // src/utils/email.js
 // Fire-and-forget transactional email helper, backed by Resend.
-// Each function returns a promise but is intended to be called without await
-// from request handlers; failures are logged but never thrown to the user.
 
 import { Resend } from 'resend';
 import { query } from '../db/index.js';
@@ -85,7 +83,7 @@ ${footerHtml}
 </body></html>`;
 }
 
-// ---------- 7 typed notification functions ----------
+// ---------- Notification functions ----------
 
 // 1. Welcome email (on signup)
 export function sendWelcomeEmail({ to, fullName, role }) {
@@ -228,7 +226,6 @@ export function sendDealRoomOpenedEmail({ to, investorName, sponsorName, project
 }
 
 // 6. Deal room document uploaded -> notify other members (throttled)
-// Throttle: don't email if uploader uploaded another doc in same room in last 30 mins
 export async function sendDealRoomDocumentUploadedEmail({
   roomId,
   uploaderUserId,
@@ -236,7 +233,6 @@ export async function sendDealRoomDocumentUploadedEmail({
   documentTitle,
   projectTitle,
 }) {
-  // Throttle check: any previous upload by this user in this room in last 30 min?
   const throttleRes = await query(
     `SELECT 1 FROM deal_room_access_log
       WHERE deal_room_id = $1
@@ -252,7 +248,6 @@ export async function sendDealRoomDocumentUploadedEmail({
     return;
   }
 
-  // Get other members' emails (exclude uploader)
   const recipientsRes = await query(
     `SELECT u.email, u.full_name
        FROM deal_room_members m
@@ -286,7 +281,6 @@ export async function sendDealRoomMemberInvitedEmail({
   inviterName,
   projectTitle,
 }) {
-  // Welcome the new member
   fireAndForget(send({
     to: inviteeEmail,
     subject: `You've been added to ${projectTitle}'s deal room`,
@@ -302,7 +296,6 @@ export async function sendDealRoomMemberInvitedEmail({
     }),
   }));
 
-  // Notify existing members (excluding inviter and invitee)
   const recipientsRes = await query(
     `SELECT u.email
        FROM deal_room_members m
@@ -328,6 +321,46 @@ export async function sendDealRoomMemberInvitedEmail({
   });
 }
 
+// 8. NEW: Opportunity interest expressed -> notify opportunity owner
+export function sendOpportunityInterestExpressedEmail({
+  to,
+  ownerName,
+  investorName,
+  investorOrg,
+  opportunityTitle,
+  opportunityType,
+  opportunityId,
+  message,
+}) {
+  const typeLabel = {
+    commodity_request: 'commodity request',
+    logistics_load:    'logistics load',
+    agri_offtake:      'agri offtake',
+    tender:            'tender',
+  }[opportunityType] || 'opportunity';
+
+  const msgLine = message
+    ? `<p style="background:#f6f6f6;padding:12px 14px;border-radius:6px;font-size:13px;color:#555;font-style:italic;">"${escapeHtml(message)}"</p>`
+    : '';
+
+  return send({
+    to,
+    subject: `${investorName} expressed interest in your ${typeLabel}`,
+    html: wrap({
+      heading: 'New verified interest in your listing',
+      body: `
+        <p>Hi ${ownerName},</p>
+        <p><strong>${investorName}</strong>${investorOrg ? ` (${investorOrg})` : ''} has expressed verified interest in your <strong>${typeLabel}</strong>:</p>
+        <p style="margin:14px 0;font-size:15px;color:#1a1a1a;"><strong>${escapeHtml(opportunityTitle)}</strong></p>
+        ${msgLine}
+        <p>Open the listing to review the counterparty's profile and progress the engagement.</p>
+      `,
+      ctaLabel: 'View Listing',
+      ctaUrl: `${APP_URL}/opportunities/${opportunityType}/${opportunityId}`,
+    }),
+  });
+}
+
 // ---------- Public fire-and-forget wrappers ----------
 
 export const email = {
@@ -338,6 +371,7 @@ export const email = {
   dealRoomOpened: (args) => fireAndForget(sendDealRoomOpenedEmail(args)),
   dealRoomDocumentUploaded: (args) => fireAndForget(sendDealRoomDocumentUploadedEmail(args)),
   dealRoomMemberInvited: (args) => fireAndForget(sendDealRoomMemberInvitedEmail(args)),
+  opportunityInterestExpressed: (args) => fireAndForget(sendOpportunityInterestExpressedEmail(args)),
 };
 
 // ---------- Utilities ----------
