@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Menu, X, LogOut } from 'lucide-react';
 import { SaregoMark } from './Brand.jsx';
 import { getAccessToken, setAccessToken } from '../lib/api.js';
 
 export default function Header({ variant = 'light' }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const { pathname } = useLocation();
@@ -12,12 +14,10 @@ export default function Header({ variant = 'light' }) {
   const isDark = variant === 'dark';
 
   useEffect(() => {
-    // Re-check auth state on every route change so the header stays in sync
     setSignedIn(!!getAccessToken());
   }, [pathname]);
 
   async function handleSignOut() {
-    // Best-effort server-side logout (revokes refresh token); ignore failures
     try {
       const BASE_URL = import.meta.env.VITE_API_URL || '';
       await fetch(`${BASE_URL}/api/auth/logout`, {
@@ -34,10 +34,10 @@ export default function Header({ variant = 'light' }) {
   }
 
   const links = [
-    { href: '/#marketplace', label: 'Marketplace' },
-    { href: '/#trade',       label: 'Trade Hub' },
-    { href: '/#governments', label: 'For Governments' },
-    { href: '/#investors',   label: 'For Investors' },
+    { href: '/#marketplace', label: t('header.nav.marketplace') },
+    { href: '/#trade',       label: t('header.nav.tradeHub') },
+    { href: '/#governments', label: t('header.nav.forGovernments') },
+    { href: '/#investors',   label: t('header.nav.forInvestors') },
   ];
 
   return (
@@ -90,7 +90,7 @@ export default function Header({ variant = 'light' }) {
           {signedIn ? (
             <>
               <Link to="/dashboard" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
-                Dashboard
+                {t('header.actions.dashboard')}
               </Link>
               <button
                 type="button"
@@ -98,23 +98,23 @@ export default function Header({ variant = 'light' }) {
                 className="btn btn-gold"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
-                <LogOut size={14} /> Sign Out
+                <LogOut size={14} /> {t('header.actions.signOut')}
               </button>
             </>
           ) : (
             <>
               <Link to="/login" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
-                Sign In
+                {t('header.actions.signIn')}
               </Link>
               <Link to="/login?mode=register" className="btn btn-gold">
-                Request Access
+                {t('header.actions.requestAccess')}
               </Link>
             </>
           )}
         </div>
 
         <button
-          aria-label="Menu"
+          aria-label={t('header.menu')}
           onClick={() => setOpen(!open)}
           data-mobile-toggle
           style={{
@@ -162,7 +162,7 @@ export default function Header({ variant = 'light' }) {
                   className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}
                   style={{ flex: 1 }}
                 >
-                  Dashboard
+                  {t('header.actions.dashboard')}
                 </Link>
                 <button
                   type="button"
@@ -170,7 +170,7 @@ export default function Header({ variant = 'light' }) {
                   className="btn btn-gold"
                   style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
-                  <LogOut size={14} /> Sign Out
+                  <LogOut size={14} /> {t('header.actions.signOut')}
                 </button>
               </>
             ) : (
@@ -181,7 +181,7 @@ export default function Header({ variant = 'light' }) {
                   className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}
                   style={{ flex: 1 }}
                 >
-                  Sign In
+                  {t('header.actions.signIn')}
                 </Link>
                 <Link
                   to="/login?mode=register"
@@ -189,7 +189,7 @@ export default function Header({ variant = 'light' }) {
                   className="btn btn-gold"
                   style={{ flex: 1 }}
                 >
-                  Request Access
+                  {t('header.actions.requestAccess')}
                 </Link>
               </>
             )}
@@ -197,7 +197,6 @@ export default function Header({ variant = 'light' }) {
         </div>
       )}
 
-      {/* Inline responsive tweak - nav visibility */}
       <style>{`
         @media (min-width: 880px) {
           [data-desktop-nav]    { display: flex !important; }
