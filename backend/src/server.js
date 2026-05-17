@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -14,6 +14,9 @@ import investorRoutes from './routes/investor.js';
 import adminRoutes from './routes/admin.js';
 import kycRoutes from './routes/kyc.js';
 import dealRoomRoutes from './routes/dealRooms.js';
+import statsRoutes from './routes/stats.js';
+import activityRoutes from './routes/activity.js';
+import opportunitiesRoutes from './routes/opportunities.js';
 import { errorMiddleware } from './middleware/errors.js';
 
 const app = express();
@@ -58,6 +61,9 @@ app.use('/api/investor', investorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/kyc', kycRoutes);
 app.use('/api/deal-rooms', dealRoomRoutes);
+app.use('/api/stats', statsRoutes);
+app.use('/api/activity', activityRoutes);
+app.use('/api/opportunities', opportunitiesRoutes);
 
 // ---------- Error handler (last) ----------
 app.use(errorMiddleware);
