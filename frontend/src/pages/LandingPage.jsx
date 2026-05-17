@@ -85,13 +85,27 @@ const ROLES = [
    Page
    ===================================================================== */
 export default function LandingPage() {
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [selectedSectors, setSelectedSectors] = useState([]);
+
+  function toggleSector(slug) {
+    setSelectedSectors((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
+    );
+  }
+
   return (
     <div>
       <Header variant="dark" />
       <Hero />
-      <PipelineSection />
+      <PipelineSection selectedCountry={selectedCountry} selectedSectors={selectedSectors} />
       <RolesSection />
-      <MapSection />
+      <MapSection
+        selectedCountry={selectedCountry}
+        selectedSectors={selectedSectors}
+        onSelectCountry={setSelectedCountry}
+        onSelectSector={toggleSector}
+      />
       <PillarsSection />
       <CTASection />
       <Footer />
@@ -250,14 +264,16 @@ function Hero() {
 }
 
 /* ----------------------------- PIPELINE ----------------------------------- */
-function PipelineSection() {
+function PipelineSection({ selectedCountry = null, selectedSectors = [] }) {
   const [projects, setProjects] = useState(null);   // null = loading
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const data = await api('/api/projects?limit=3');
+        const params = new URLSearchParams({ limit: '12' });
+        if (selectedCountry) params.set('country', selectedCountry);
+        const data = await api('/api/projects?' + params.toString());
         if (cancelled) return;
         const real = (data.projects || []).map(normalizeProject);
         // If we have at least one real published project, show real data.
@@ -269,7 +285,7 @@ function PipelineSection() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [selectedCountry, selectedSectors]);
 
   return (
     <section id="marketplace" style={{ padding: 'var(--space-12) 0' }} className="paper-grain">
@@ -516,7 +532,7 @@ function RolesSection() {
 }
 
 /* ----------------------------- MAP ----------------------------------- */
-function MapSection() {
+function MapSection({ selectedCountry, selectedSectors, onSelectCountry, onSelectSector }) {
   return (
     <section
       style={{
@@ -560,7 +576,7 @@ function MapSection() {
           </div>
 
           <div style={{ position: 'relative' }}>
-            <AfricaMap />
+            <AfricaMap selectedCountry={selectedCountry} selectedSectors={selectedSectors} onSelectCountry={onSelectCountry} onSelectSector={onSelectSector} />
           </div>
         </div>
       </div>
