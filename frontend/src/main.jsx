@@ -11,6 +11,9 @@ import LoginPage from './pages/LoginPage.jsx';
 import ProjectDetailPage from './pages/ProjectDetailPage.jsx';
 import ProjectFormPage from './pages/ProjectFormPage.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
+import InvestorsPage from './pages/InvestorsPage.jsx';
+import GovernmentsPage from './pages/GovernmentsPage.jsx';
+import TradeHubPage from './pages/TradeHubPage.jsx';
 import KycPage from './pages/KycPage.jsx';
 import DealRoomsListPage from './pages/DealRoomsListPage.jsx';
 import DealRoomPage from './pages/DealRoomPage.jsx';
@@ -27,6 +30,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 <Route path="/deal-rooms" element={<DealRoomsListPage />} />
 <Route path="/deal-rooms/:id" element={<DealRoomPage />} />
         {/* Project form routes — defined BEFORE /:slug so they take priority */}
+        <Route path="/investors" element={<InvestorsPage />} />
+        <Route path="/governments" element={<GovernmentsPage />} />
+        <Route path="/trade-hub" element={<TradeHubPage />} />
         <Route path="/projects/new" element={<ProjectFormPage />} />
         <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
         <Route path="/projects/:slug" element={<ProjectDetailPage />} />

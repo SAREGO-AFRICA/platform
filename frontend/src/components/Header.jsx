@@ -34,10 +34,10 @@ export default function Header({ variant = 'light' }) {
   }
 
   const links = [
-    { href: '/#marketplace', label: t('header.nav.marketplace') },
-    { href: '/#trade',       label: t('header.nav.tradeHub') },
-    { href: '/#governments', label: t('header.nav.forGovernments') },
-    { href: '/#investors',   label: t('header.nav.forInvestors') },
+    { href: '/#marketplace',  label: t('header.nav.marketplace') },
+    { href: '/trade-hub',     label: t('header.nav.tradeHub') },
+    { href: '/governments',   label: t('header.nav.forGovernments') },
+    { href: '/investors',     label: t('header.nav.forInvestors') },
   ];
 
   return (
