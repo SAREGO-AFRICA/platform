@@ -1,0 +1,75 @@
+{
+  "common": {
+    "language": "Langue",
+    "english": "English",
+    "french": "Français",
+    "portuguese": "Português"
+  },
+  "header": {
+    "nav": {
+      "marketplace": "Marché",
+      "tradeHub": "Pôle commercial",
+      "forGovernments": "Pour les gouvernements",
+      "forInvestors": "Pour les investisseurs"
+    },
+    "actions": {
+      "signIn": "Connexion",
+      "requestAccess": "Demander l'accès",
+      "dashboard": "Tableau de bord",
+      "signOut": "Déconnexion"
+    },
+    "menu": "Menu"
+  },
+  "footer": {
+    "about": "Bureau régional pour la croissance économique de l'Afrique australe. La plateforme institutionnelle pour le commerce transfrontalier, l'investissement et les projets en pipeline à travers la SADC et l'Afrique au sens large.",
+    "columns": {
+      "platform": {
+        "title": "Plateforme",
+        "links": {
+          "marketplace": "Marché d'investissement",
+          "tradeFacilitation": "Facilitation des échanges",
+          "pipeline": "Pipeline de projets",
+          "dealRooms": "Salles de transaction"
+        }
+      },
+      "for": {
+        "title": "Pour",
+        "links": {
+          "governments": "Gouvernements",
+          "investors": "Investisseurs",
+          "corporates": "Entreprises",
+          "smes": "PME",
+          "developers": "Développeurs de projets"
+        }
+      },
+      "institution": {
+        "title": "Institution",
+        "links": {
+          "about": "À propos de SAREGO",
+          "mandate": "Mandat",
+          "governance": "Gouvernance",
+          "press": "Presse",
+          "careers": "Carrières"
+        }
+      },
+      "resources": {
+        "title": "Ressources",
+        "links": {
+          "insights": "Analyses",
+          "sectorBriefs": "Notes sectorielles",
+          "countryProfiles": "Profils pays",
+          "api": "API",
+          "contact": "Contact"
+        }
+      }
+    },
+    "tagline": "ÉTABLI POUR LA RÉGION SADC",
+    "copyright": "© {{year}} SAREGO",
+    "legal": {
+      "privacy": "CONFIDENTIALITÉ",
+      "terms": "CONDITIONS",
+      "security": "SÉCURITÉ",
+      "compliance": "CONFORMITÉ"
+    }
+  }
+}

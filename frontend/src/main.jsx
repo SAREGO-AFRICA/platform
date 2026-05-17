@@ -1,8 +1,10 @@
-﻿import React from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import './styles/global.css';
+import './i18n';
+import './i18n';
 import LandingPage from './pages/LandingPage.jsx';
 import InvestorDashboard from './pages/InvestorDashboard.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -24,7 +26,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/kyc" element={<KycPage />} />
 <Route path="/deal-rooms" element={<DealRoomsListPage />} />
 <Route path="/deal-rooms/:id" element={<DealRoomPage />} />
-        {/* Project form routes â€” defined BEFORE /:slug so they take priority */}
+        {/* Project form routes — defined BEFORE /:slug so they take priority */}
         <Route path="/projects/new" element={<ProjectFormPage />} />
         <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
         <Route path="/projects/:slug" element={<ProjectDetailPage />} />

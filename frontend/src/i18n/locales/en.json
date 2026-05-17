@@ -1,0 +1,75 @@
+{
+  "common": {
+    "language": "Language",
+    "english": "English",
+    "french": "Français",
+    "portuguese": "Português"
+  },
+  "header": {
+    "nav": {
+      "marketplace": "Marketplace",
+      "tradeHub": "Trade Hub",
+      "forGovernments": "For Governments",
+      "forInvestors": "For Investors"
+    },
+    "actions": {
+      "signIn": "Sign In",
+      "requestAccess": "Request Access",
+      "dashboard": "Dashboard",
+      "signOut": "Sign Out"
+    },
+    "menu": "Menu"
+  },
+  "footer": {
+    "about": "Southern Africa Regional Economic Growth Office. The institutional platform for cross-border trade, investment, and project pipeline across SADC and broader Africa.",
+    "columns": {
+      "platform": {
+        "title": "Platform",
+        "links": {
+          "marketplace": "Investment Marketplace",
+          "tradeFacilitation": "Trade Facilitation",
+          "pipeline": "Project Pipeline",
+          "dealRooms": "Deal Rooms"
+        }
+      },
+      "for": {
+        "title": "For",
+        "links": {
+          "governments": "Governments",
+          "investors": "Investors",
+          "corporates": "Corporates",
+          "smes": "SMEs",
+          "developers": "Project Developers"
+        }
+      },
+      "institution": {
+        "title": "Institution",
+        "links": {
+          "about": "About SAREGO",
+          "mandate": "Mandate",
+          "governance": "Governance",
+          "press": "Press",
+          "careers": "Careers"
+        }
+      },
+      "resources": {
+        "title": "Resources",
+        "links": {
+          "insights": "Insights",
+          "sectorBriefs": "Sector Briefs",
+          "countryProfiles": "Country Profiles",
+          "api": "API",
+          "contact": "Contact"
+        }
+      }
+    },
+    "tagline": "ESTABLISHED FOR THE SADC REGION",
+    "copyright": "© {{year}} SAREGO",
+    "legal": {
+      "privacy": "PRIVACY",
+      "terms": "TERMS",
+      "security": "SECURITY",
+      "compliance": "COMPLIANCE"
+    }
+  }
+}

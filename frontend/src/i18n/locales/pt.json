@@ -1,0 +1,75 @@
+{
+  "common": {
+    "language": "Idioma",
+    "english": "English",
+    "french": "Français",
+    "portuguese": "Português"
+  },
+  "header": {
+    "nav": {
+      "marketplace": "Mercado",
+      "tradeHub": "Centro Comercial",
+      "forGovernments": "Para Governos",
+      "forInvestors": "Para Investidores"
+    },
+    "actions": {
+      "signIn": "Entrar",
+      "requestAccess": "Solicitar Acesso",
+      "dashboard": "Painel",
+      "signOut": "Sair"
+    },
+    "menu": "Menu"
+  },
+  "footer": {
+    "about": "Escritório Regional para o Crescimento Económico da África Austral. A plataforma institucional para comércio transfronteiriço, investimento e pipeline de projectos em toda a SADC e em África.",
+    "columns": {
+      "platform": {
+        "title": "Plataforma",
+        "links": {
+          "marketplace": "Mercado de Investimento",
+          "tradeFacilitation": "Facilitação Comercial",
+          "pipeline": "Pipeline de Projectos",
+          "dealRooms": "Salas de Negociação"
+        }
+      },
+      "for": {
+        "title": "Para",
+        "links": {
+          "governments": "Governos",
+          "investors": "Investidores",
+          "corporates": "Empresas",
+          "smes": "PMEs",
+          "developers": "Promotores de Projectos"
+        }
+      },
+      "institution": {
+        "title": "Instituição",
+        "links": {
+          "about": "Sobre a SAREGO",
+          "mandate": "Mandato",
+          "governance": "Governação",
+          "press": "Imprensa",
+          "careers": "Carreiras"
+        }
+      },
+      "resources": {
+        "title": "Recursos",
+        "links": {
+          "insights": "Análises",
+          "sectorBriefs": "Notas Sectoriais",
+          "countryProfiles": "Perfis de Países",
+          "api": "API",
+          "contact": "Contacto"
+        }
+      }
+    },
+    "tagline": "ESTABELECIDA PARA A REGIÃO SADC",
+    "copyright": "© {{year}} SAREGO",
+    "legal": {
+      "privacy": "PRIVACIDADE",
+      "terms": "TERMOS",
+      "security": "SEGURANÇA",
+      "compliance": "CONFORMIDADE"
+    }
+  }
+}
