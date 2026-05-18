@@ -2,6 +2,7 @@
 // Opportunity verticals endpoints.
 //
 //   GET  /api/opportunities/corridors
+//   GET  /api/opportunities/featured             — homepage snapshot (one per vertical)
 //   GET  /api/opportunities/:type                — list
 //   GET  /api/opportunities/:type/:id            — single fetch
 //   POST /api/opportunities/:type/:id/interest   — express interest (auth + verified)
@@ -47,6 +48,118 @@ function normaliseRow(row) {
     value_usd: row.value_usd != null ? Number(row.value_usd) : null,
   };
 }
+
+// ============================================================
+// GET /api/opportunities/featured
+// Returns one opportunity per vertical for the homepage snapshot.
+// Selection logic (tonight, dumb):
+//   - status = 'published'
+//   - not yet expired (expires_at > now or NULL)
+//   - prefer verified/institutional tier when available
+//   - then most recent published_at
+// Future intelligence (e.g. engagement velocity, sponsored ordering,
+// corridor balancing) replaces the SQL without changing response shape.
+// ============================================================
+// In-memory 30s cache
+let _featuredCache = null;
+let _featuredCachedAt = 0;
+const FEATURED_TTL_MS = 30 * 1000;
+
+router.get(
+  '/featured',
+  asyncHandler(async (_req, res) => {
+    const now = Date.now();
+    if (_featuredCache && now - _featuredCachedAt < FEATURED_TTL_MS) {
+      return res.json(_featuredCache);
+    }
+
+    // ORDER BY clause: institutional first, then verified, then basic, then unverified,
+    // then most recent.
+    const tierOrder = `CASE verified_level
+                         WHEN 'institutional' THEN 0
+                         WHEN 'verified'      THEN 1
+                         WHEN 'basic'         THEN 2
+                         WHEN 'unverified'    THEN 3
+                         ELSE 4 END`;
+
+    const futureClause = `(expires_at IS NULL OR expires_at > now())`;
+
+    const [commodityRes, logisticsRes, agriRes, tendersRes, projectsRes] = await Promise.all([
+      query(`
+        SELECT id, title, summary, country_iso, value_usd, status,
+               verified_level, expires_at, applicants_count,
+               owner_user_id, owner_org_id, source_type, metadata,
+               ${TYPE_EXTRAS.commodity_requests},
+               published_at
+          FROM commodity_requests
+         WHERE status = 'published' AND ${futureClause}
+         ORDER BY ${tierOrder}, published_at DESC
+         LIMIT 1
+      `),
+      query(`
+        SELECT id, title, summary, country_iso, value_usd, status,
+               verified_level, expires_at, applicants_count,
+               owner_user_id, owner_org_id, source_type, metadata,
+               ${TYPE_EXTRAS.logistics_loads},
+               published_at
+          FROM logistics_loads
+         WHERE status = 'published' AND ${futureClause}
+         ORDER BY ${tierOrder}, published_at DESC
+         LIMIT 1
+      `),
+      query(`
+        SELECT id, title, summary, country_iso, value_usd, status,
+               verified_level, expires_at, applicants_count,
+               owner_user_id, owner_org_id, source_type, metadata,
+               ${TYPE_EXTRAS.agri_offtake_requests},
+               published_at
+          FROM agri_offtake_requests
+         WHERE status = 'published' AND ${futureClause}
+         ORDER BY ${tierOrder}, published_at DESC
+         LIMIT 1
+      `),
+      query(`
+        SELECT id, title, summary, country_iso, value_usd, status,
+               verified_level, expires_at, applicants_count,
+               owner_user_id, owner_org_id, source_type, metadata,
+               ${TYPE_EXTRAS.tenders},
+               published_at
+          FROM tenders
+         WHERE status = 'published' AND ${futureClause}
+         ORDER BY ${tierOrder}, published_at DESC
+         LIMIT 1
+      `),
+      // Projects: normalise to opportunity shape so frontend doesn't branch.
+      query(`
+        SELECT p.id, p.title, p.summary, c.iso_code AS country_iso,
+               p.capital_required_usd AS value_usd, p.status,
+               'institutional'::text AS verified_level, NULL::timestamptz AS expires_at,
+               0 AS applicants_count, p.owner_user_id, p.organization_id AS owner_org_id,
+               'user_generated'::text AS source_type,
+               jsonb_build_object('slug', p.slug) AS metadata,
+               p.created_at AS published_at
+          FROM projects p
+          JOIN countries c ON c.id = p.country_id
+         WHERE p.status = 'published'
+         ORDER BY p.created_at DESC
+         LIMIT 1
+      `),
+    ]);
+
+    const featured = {
+      commodity_request: normaliseRow(commodityRes.rows[0]),
+      logistics_load:    normaliseRow(logisticsRes.rows[0]),
+      agri_offtake:      normaliseRow(agriRes.rows[0]),
+      tender:            normaliseRow(tendersRes.rows[0]),
+      investment_project: normaliseRow(projectsRes.rows[0]),
+      // trade_finance: null,  // reserved for when that vertical is built
+    };
+
+    _featuredCache = { featured, cachedAt: new Date().toISOString() };
+    _featuredCachedAt = now;
+    res.json(_featuredCache);
+  })
+);
 
 // ============================================================
 // GET /api/opportunities/corridors  (trade corridors reference)
@@ -136,7 +249,6 @@ router.get(
     const row = r.rows[0];
     if (!row) throw new HttpError(404, 'Opportunity not found');
 
-    // Enrich with owner info if available
     let owner = null;
     if (row.owner_user_id) {
       const ownerRes = await query(
@@ -154,7 +266,6 @@ router.get(
       ownerOrg = orgRes.rows[0] || null;
     }
 
-    // Has the current user (if any) already expressed interest?
     let userInterest = null;
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -202,7 +313,6 @@ router.post(
     const id = req.params.id;
     const data = interestSchema.parse(req.body || {});
 
-    // Verify the opportunity exists and is open
     const oppRes = await query(
       `SELECT id, title, owner_user_id, country_iso, status
          FROM ${table}
@@ -216,13 +326,10 @@ router.post(
       throw new HttpError(400, 'Opportunity is not currently open');
     }
 
-    // Atomic: insert interest + increment counter in the same transaction.
-    // Unique constraint makes this idempotent on re-click.
     let alreadyInterested = false;
     let interestRow = null;
     try {
       interestRow = await withTransaction(async (client) => {
-        // Look up the user's org for the org_id column (best-effort)
         const userRes = await client.query(
           `SELECT organization_id FROM users WHERE id = $1`,
           [req.user.id]
@@ -237,7 +344,6 @@ router.post(
           [type, id, req.user.id, orgId, data.message ?? null]
         );
 
-        // Counter increment in the same transaction
         await client.query(
           `UPDATE ${table}
               SET applicants_count = applicants_count + 1,
@@ -249,7 +355,6 @@ router.post(
         return inserted.rows[0];
       });
     } catch (err) {
-      // Postgres unique violation = user already expressed interest
       if (err.code === '23505') {
         alreadyInterested = true;
         const existing = await query(
@@ -263,14 +368,12 @@ router.post(
       }
     }
 
-    // Fetch the new counter value for the response
     const counterRes = await query(
       `SELECT applicants_count FROM ${table} WHERE id = $1`,
       [id]
     );
     const applicantsCount = counterRes.rows[0]?.applicants_count ?? 0;
 
-    // Fire-and-forget email to owner (only on a new interest, and only if owner exists)
     if (!alreadyInterested && opp.owner_user_id) {
       const ownerRes = await query(
         `SELECT email, full_name FROM users WHERE id = $1`,
