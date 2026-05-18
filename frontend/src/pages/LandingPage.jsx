@@ -15,7 +15,11 @@ import {
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
 import AfricaMap from '../components/AfricaMap.jsx';
+import LiveCounter from '../components/LiveCounter.jsx';
+import RecentActivityFeed from '../components/RecentActivityFeed.jsx';
+import FeaturedOpportunitiesGrid from '../components/FeaturedOpportunitiesGrid.jsx';
 import { api } from '../lib/api.js';
+import { usePlatformStats } from '../lib/usePlatformStats.js';
 
 /* ----------------------------- Demo data ------------------------------- */
 const FEATURED_PROJECTS = [
@@ -46,12 +50,6 @@ const FEATURED_PROJECTS = [
     irr: '17.2%',
     stage: 'Financing',
   },
-];
-
-const STATS = [
-  { figure: '16', label: 'SADC Member States' },
-  { figure: '$340B', label: 'Estimated Pipeline Capital' },
-  { figure: '6', label: 'Continental Economic Communities' },
 ];
 
 const ROLES = [
@@ -98,6 +96,7 @@ export default function LandingPage() {
     <div>
       <Header variant="dark" />
       <Hero />
+      <LiveActivitySection />
       <PipelineSection selectedCountry={selectedCountry} selectedSectors={selectedSectors} />
       <RolesSection />
       <MapSection
@@ -122,37 +121,23 @@ function Hero() {
         color: 'var(--ivory-50)',
         position: 'relative',
         overflow: 'hidden',
-        paddingTop: 'var(--space-12)',
-        paddingBottom: 'var(--space-12)',
+        paddingTop: 'var(--space-8)',
+        paddingBottom: 'var(--space-8)',
+        minHeight: '50vh',
+        display: 'flex',
+        alignItems: 'center',
       }}
     >
-      {/* Decorative gold compass arcs */}
-      <svg
+      {/* Subtle glow backdrop (replacing the decorative compass) */}
+      <div
         aria-hidden="true"
-        viewBox="0 0 800 800"
         style={{
           position: 'absolute',
-          right: -200,
-          top: -100,
-          width: 900,
-          height: 900,
-          opacity: 0.18,
+          inset: 0,
+          background: 'radial-gradient(circle at 75% 30%, rgba(220,192,104,0.08), transparent 50%)',
           pointerEvents: 'none',
         }}
-      >
-        <defs>
-          <radialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#dcc068" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#dcc068" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <circle cx="400" cy="400" r="400" fill="url(#heroGlow)" />
-        <circle cx="400" cy="400" r="320" fill="none" stroke="#dcc068" strokeWidth="0.5" strokeDasharray="2 8" />
-        <circle cx="400" cy="400" r="240" fill="none" stroke="#dcc068" strokeWidth="0.5" />
-        <circle cx="400" cy="400" r="160" fill="none" stroke="#dcc068" strokeWidth="0.5" strokeDasharray="2 8" />
-        <line x1="400" y1="40" x2="400" y2="760" stroke="#dcc068" strokeWidth="0.4" />
-        <line x1="40" y1="400" x2="760" y2="400" stroke="#dcc068" strokeWidth="0.4" />
-      </svg>
+      />
 
       <div className="container" style={{ position: 'relative' }}>
         <div className="eyebrow fade-up" style={{ color: 'var(--gold-400)' }}>
@@ -163,7 +148,7 @@ function Hero() {
           className="display fade-up fade-up-1"
           style={{
             marginTop: 'var(--space-4)',
-            maxWidth: 1100,
+            maxWidth: 1000,
             color: 'var(--ivory-50)',
             fontWeight: 400,
           }}
@@ -179,93 +164,166 @@ function Hero() {
           className="fade-up fade-up-2"
           style={{
             marginTop: 'var(--space-5)',
-            maxWidth: 640,
+            maxWidth: 620,
             fontSize: 17,
             color: 'var(--ink-300)',
-            lineHeight: 1.65,
+            lineHeight: 1.6,
           }}
         >
-          SAREGO connects governments, development finance institutions, private investors,
-          corporates, and project developers across SADC and the broader continent —
-          structuring trade, investment, and bankable project flow on a single, verified rail.
+          Connecting governments, development finance institutions, private investors, and
+          project developers across SADC — on a single, verified rail.
         </p>
 
         <div
           className="flex gap-3 fade-up fade-up-3"
           style={{ marginTop: 'var(--space-6)', flexWrap: 'wrap' }}
         >
-          <Link to="/login?mode=register" className="btn btn-gold">
-            Request Platform Access
+          <Link to="/trade-hub" className="btn btn-gold">
+            Explore Opportunities
             <ArrowUpRight size={16} />
           </Link>
-          <a href="#marketplace" className="btn btn-ghost-light">
-            Explore the Pipeline
-          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ----------------------------- LIVE ACTIVITY SECTION --------------------- */
+function LiveActivitySection() {
+  const { stats } = usePlatformStats();
+
+  return (
+    <section
+      id="live-activity"
+      style={{
+        background: 'var(--ink-950)',
+        color: 'var(--ivory-50)',
+        paddingTop: 'var(--space-8)',
+        paddingBottom: 'var(--space-10)',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+      }}
+    >
+      <div className="container">
+        {/* Section header */}
+        <div style={{ marginBottom: 'var(--space-8)' }}>
+          <div style={{ fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--gold-400, #dcc068)', marginBottom: 10, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <LivePulse /> Live across the region
+          </div>
+          <h2 style={{ fontSize: 'clamp(26px, 3vw, 36px)', fontWeight: 500, color: 'var(--ivory-50)', margin: 0, letterSpacing: '-0.015em', maxWidth: 720, lineHeight: 1.2 }}>
+            Active economic flow across SADC, updated in real time.
+          </h2>
         </div>
 
-        {/* Stat strip */}
+        {/* Counter strip */}
         <div
-          className="fade-up fade-up-5"
           style={{
-            marginTop: 'var(--space-12)',
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
             gap: 'var(--space-6)',
-            paddingTop: 'var(--space-6)',
-            borderTop: '1px solid var(--ink-800)',
+            padding: '24px 0',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            marginBottom: 'var(--space-8)',
           }}
         >
-          {STATS.map((s, i) => (
-            <div key={s.label} style={{ borderLeft: i > 0 ? '1px solid var(--ink-800)' : 'none', paddingLeft: i > 0 ? 24 : 0 }}>
-              <div
-                className="display"
-                style={{
-                  fontSize: 'clamp(40px, 5vw, 64px)',
-                  color: 'var(--gold-400)',
-                  fontWeight: 500,
-                  lineHeight: 1,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {s.figure}
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  letterSpacing: '0.16em',
-                  textTransform: 'uppercase',
-                  color: 'var(--ink-300)',
-                  marginTop: 12,
-                }}
-              >
-                {s.label}
-              </div>
-            </div>
-          ))}
+          <LiveCounter
+            value={stats?.activeOpportunities ?? 0}
+            loading={!stats}
+            label="Active Opportunities"
+            format="number"
+          />
+          <LiveCounter
+            value={stats?.byVertical?.tenders ?? 0}
+            loading={!stats}
+            label="Government Tenders"
+            format="number"
+          />
+          <LiveCounter
+            value={stats?.byVertical?.logisticsLoads ?? 0}
+            loading={!stats}
+            label="Logistics Loads"
+            format="number"
+          />
+          <LiveCounter
+            value={stats?.totalCapitalUsd ?? 0}
+            loading={!stats}
+            label="Total Capital Tracked"
+            format="usd"
+          />
+          <LiveCounter
+            value={stats?.activeCountries ?? 0}
+            loading={!stats}
+            label="Countries Participating"
+            format="number"
+          />
+          <LiveCounter
+            value={stats?.verifiedCounterparties ?? 0}
+            loading={!stats}
+            label="Verified Counterparties"
+            format="number"
+          />
+        </div>
+
+        {/* Featured grid + Activity feed (2-col on desktop, stacked on mobile) */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.45fr 1fr',
+            gap: 'var(--space-8)',
+            alignItems: 'flex-start',
+          }}
+          data-live-grid
+        >
+          <div>
+            <FeaturedOpportunitiesGrid />
+          </div>
+          <aside data-live-aside>
+            <RecentActivityFeed
+              title="Live activity"
+              limit={8}
+              compact
+              maxHeight={620}
+            />
+          </aside>
         </div>
       </div>
 
       <style>{`
-        @media (max-width: 720px) {
-          section > .container > div:last-child {
-            grid-template-columns: 1fr !important;
-            gap: var(--space-5) !important;
-          }
-          section > .container > div:last-child > div {
-            border-left: none !important;
-            padding-left: 0 !important;
-            border-top: 1px solid var(--ink-800);
-            padding-top: 20px;
-          }
+        @media (max-width: 920px) {
+          [data-live-grid] { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </section>
   );
 }
 
+function LivePulse() {
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        width: 7,
+        height: 7,
+        borderRadius: '50%',
+        background: '#7fb069',
+        boxShadow: '0 0 0 0 rgba(127,176,105,0.6)',
+        animation: 'sarego-landing-pulse 2s infinite',
+      }}
+    >
+      <style>{`
+        @keyframes sarego-landing-pulse {
+          0%   { box-shadow: 0 0 0 0   rgba(127,176,105,0.5); }
+          70%  { box-shadow: 0 0 0 8px rgba(127,176,105, 0);  }
+          100% { box-shadow: 0 0 0 0   rgba(127,176,105, 0);  }
+        }
+      `}</style>
+    </span>
+  );
+}
+
 /* ----------------------------- PIPELINE ----------------------------------- */
 function PipelineSection({ selectedCountry = null, selectedSectors = [] }) {
-  const [projects, setProjects] = useState(null);   // null = loading
+  const [projects, setProjects] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -285,34 +343,41 @@ function PipelineSection({ selectedCountry = null, selectedSectors = [] }) {
       }
     })();
     return () => { cancelled = true; };
-  }, [selectedCountry, selectedSectors]);
+  }, [selectedCountry]);
 
   return (
-    <section id="marketplace" style={{ padding: 'var(--space-12) 0' }} className="paper-grain">
+    <section id="marketplace" style={{ padding: 'var(--space-10) 0' }} className="paper-grain">
       <div className="container">
-        <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-8)', flexWrap: 'wrap', gap: 16 }}>
-          <div>
-            <div className="eyebrow">Investment Marketplace</div>
-            <h2 style={{ marginTop: 12, maxWidth: 640 }}>
-              Bankable opportunities,{' '}
-              <span style={{ fontStyle: 'italic' }}>verified at the source.</span>
-            </h2>
-          </div>
-          <Link to="/login" className="btn btn-ghost">
-            View All Projects
-            <ArrowUpRight size={16} />
-          </Link>
+        <div className="eyebrow" style={{ color: 'var(--ink-700)' }}>
+          Established pipeline
         </div>
+        <h2
+          style={{
+            marginTop: 'var(--space-3)',
+            fontSize: 'clamp(28px, 3vw, 38px)',
+            maxWidth: 760,
+            lineHeight: 1.15,
+            color: 'var(--ink-950)',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Bankable infrastructure, industrial, and agribusiness projects across the region.
+        </h2>
+        <p style={{ marginTop: 'var(--space-3)', color: 'var(--ink-700)', maxWidth: 620, fontSize: 15, lineHeight: 1.6 }}>
+          Verified project sponsors. Indicative capital structures, ticket sizes, and engagement
+          pathways for institutional participation.
+        </p>
 
         <div
           style={{
+            marginTop: 'var(--space-8)',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
             gap: 'var(--space-5)',
           }}
         >
-          {(projects ?? FEATURED_PROJECTS).map((p, idx) => (
-            <ProjectCard key={p.slug || p.title} project={p} index={idx} />
+          {(projects ?? FEATURED_PROJECTS).map((p, i) => (
+            <ProjectCard key={p.slug || p.title} project={p} index={i} />
           ))}
         </div>
       </div>
@@ -320,206 +385,190 @@ function PipelineSection({ selectedCountry = null, selectedSectors = [] }) {
   );
 }
 
-/**
- * Convert API shape into the card's expected shape.
- * API shape:    { title, slug, country_name, flag_emoji, sectors:[{name}],
- *                 capital_required_usd, expected_irr_pct, stage }
- * Card shape:   { title, slug?, country, flag, sector, capital, irr, stage }
- */
 function normalizeProject(p) {
   return {
-    title:    p.title,
-    slug:     p.slug,
-    country:  p.country_name,
-    flag:     p.flag_emoji || '🌍',
-    sector:   Array.isArray(p.sectors) && p.sectors.length > 0
-                ? p.sectors[0].name
-                : 'Multi-sector',
-    capital:  formatUSDShort(p.capital_required_usd),
-    irr:      p.expected_irr_pct ? `${Number(p.expected_irr_pct).toFixed(1)}%` : '—',
-    stage:    titleCase(p.stage),
+    slug: p.slug,
+    title: p.title,
+    country: p.country_name || p.country,
+    flag: '',
+    sector: titleCase(p.primary_sector || ''),
+    capital: formatUSDShort(p.capital_required_usd),
+    irr: p.target_irr ? `${p.target_irr}%` : '—',
+    stage: titleCase(p.stage || ''),
   };
 }
 
 function formatUSDShort(value) {
-  const v = Number(value || 0);
-  if (v >= 1_000_000_000) return `$${(v / 1_000_000_000).toFixed(1)}B`;
-  if (v >= 1_000_000)     return `$${Math.round(v / 1_000_000)}M`;
-  if (v >= 1_000)         return `$${Math.round(v / 1_000)}K`;
-  return `$${v}`;
+  if (value == null) return '—';
+  const n = Number(value);
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(0)}M`;
+  return `$${n.toLocaleString()}`;
 }
 
 function titleCase(s) {
-  if (!s) return '—';
-  return s.split(/[_\s]+/).map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
+  return String(s).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function ProjectCard({ project, index }) {
   return (
-    <article
-      className="card"
+    <div
       style={{
-        padding: 0,
+        background: 'var(--ivory-50)',
+        border: '1px solid var(--ink-200)',
+        borderRadius: 6,
+        padding: 24,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 16,
+        transition: 'border-color 150ms, transform 150ms',
         position: 'relative',
-        transition: 'transform 250ms ease, border-color 250ms ease',
+        animation: `sarego-fade-in 0.5s ${index * 0.08}s both`,
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.borderColor = 'var(--gold-600)';
+        e.currentTarget.style.borderColor = 'var(--gold-400)';
+        e.currentTarget.style.transform = 'translateY(-2px)';
       }}
       onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = 'var(--ink-200)';
         e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.borderColor = 'var(--border)';
       }}
     >
-      {/* Card header strip */}
-      <div
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+        <div>
+          {project.flag && <div style={{ fontSize: 26, marginBottom: 6 }}>{project.flag}</div>}
+          <div style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-600)' }}>
+            {project.country}
+          </div>
+        </div>
+        {project.stage && (
+          <span
+            style={{
+              fontSize: 10,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              padding: '4px 10px',
+              borderRadius: 999,
+              border: '1px solid var(--ink-200)',
+              color: 'var(--ink-700)',
+            }}
+          >
+            {project.stage}
+          </span>
+        )}
+      </div>
+
+      <h3
         style={{
-          padding: '14px 22px',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          fontSize: 18,
+          lineHeight: 1.3,
+          color: 'var(--ink-950)',
+          margin: 0,
+          fontWeight: 500,
+          minHeight: 48,
         }}
       >
-        <div className="text-xs uppercase muted" style={{ letterSpacing: '0.16em' }}>
-          {String(index + 1).padStart(2, '0')} / Featured
+        {project.title}
+      </h3>
+
+      <div style={{ fontSize: 13, color: 'var(--ink-700)' }}>{project.sector}</div>
+
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        paddingTop: 14,
+        borderTop: '1px solid var(--ink-200)',
+        fontSize: 13,
+      }}>
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-600)' }}>Capital</div>
+          <div style={{ marginTop: 4, fontWeight: 500, color: 'var(--ink-950)' }}>{project.capital}</div>
         </div>
-        <div
-          className="mono"
-          style={{
-            fontSize: 10,
-            letterSpacing: '0.16em',
-            color: 'var(--gold-700)',
-            textTransform: 'uppercase',
-          }}
-        >
-          {project.stage}
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-600)' }}>Target IRR</div>
+          <div style={{ marginTop: 4, fontWeight: 500, color: 'var(--ink-950)' }}>{project.irr}</div>
         </div>
       </div>
 
-      <div style={{ padding: 'var(--space-5) 22px var(--space-5)' }}>
-        <div className="flex items-center gap-2" style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
-          <span style={{ fontSize: 18 }}>{project.flag}</span>
-          {project.country} · {project.sector}
-        </div>
-        <h3 style={{ marginTop: 14, fontSize: 26, lineHeight: 1.15 }}>{project.title}</h3>
-
-        <div
-          style={{
-            marginTop: 'var(--space-5)',
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 0,
-            borderTop: '1px solid var(--border)',
-          }}
-        >
-          <div style={{ padding: '14px 0', borderRight: '1px solid var(--border)', paddingRight: 16 }}>
-            <div className="text-xs uppercase muted" style={{ letterSpacing: '0.14em' }}>
-              Capital Required
-            </div>
-            <div className="mono" style={{ fontSize: 22, marginTop: 6, fontWeight: 500 }}>
-              {project.capital}
-            </div>
-          </div>
-          <div style={{ padding: '14px 0 14px 16px' }}>
-            <div className="text-xs uppercase muted" style={{ letterSpacing: '0.14em' }}>
-              Target IRR
-            </div>
-            <div className="mono" style={{ fontSize: 22, marginTop: 6, fontWeight: 500, color: 'var(--gold-700)' }}>
-              {project.irr}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {project.slug ? (
+      {project.slug && (
         <Link
           to={`/projects/${project.slug}`}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 22px',
-            borderTop: '1px solid var(--border)',
-            fontSize: 12,
-            letterSpacing: '0.16em',
-            textTransform: 'uppercase',
-            color: 'var(--ink-950)',
-            fontWeight: 500,
+            position: 'absolute',
+            inset: 0,
+            zIndex: 1,
+            textIndent: '-9999px',
+            overflow: 'hidden',
           }}
+          aria-label={`Open ${project.title}`}
         >
-          Open Teaser
-          <ArrowUpRight size={14} />
+          {project.title}
         </Link>
-      ) : (
-        <a
-          href="#"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 22px',
-            borderTop: '1px solid var(--border)',
-            fontSize: 12,
-            letterSpacing: '0.16em',
-            textTransform: 'uppercase',
-            color: 'var(--ink-950)',
-            fontWeight: 500,
-          }}
-        >
-          Open Teaser
-          <ArrowUpRight size={14} />
-        </a>
       )}
-    </article>
+
+      <style>{`
+        @keyframes sarego-fade-in {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
   );
 }
 
-/* ----------------------------- ROLES ----------------------------------- */
+/* ----------------------------- ROLES SECTION ----------------------------- */
 function RolesSection() {
   return (
     <section
+      id="trade"
       style={{
-        background: 'var(--ivory-100)',
-        padding: 'var(--space-12) 0',
+        background: 'var(--ink-950)',
+        color: 'var(--ivory-50)',
+        padding: 'var(--space-10) 0',
       }}
     >
       <div className="container">
-        <div className="eyebrow">Who SAREGO Serves</div>
-        <h2 style={{ marginTop: 12, maxWidth: 720 }}>
-          A single rail for{' '}
-          <span style={{ fontStyle: 'italic' }}>every counterparty</span> in a regional deal.
+        <div className="eyebrow" style={{ color: 'var(--gold-400)' }}>Built for institutions</div>
+        <h2
+          style={{
+            marginTop: 'var(--space-3)',
+            fontSize: 'clamp(28px, 3vw, 38px)',
+            maxWidth: 760,
+            lineHeight: 1.15,
+            color: 'var(--ivory-50)',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Trusted access for every participant in the regional economy.
         </h2>
 
         <div
           style={{
             marginTop: 'var(--space-8)',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: 0,
-            border: '1px solid var(--ivory-200)',
-            background: 'var(--bg-elev)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 'var(--space-5)',
           }}
         >
-          {ROLES.map((role) => {
+          {ROLES.map((role, i) => {
             const Icon = role.icon;
             return (
               <div
                 key={role.label}
                 style={{
-                  padding: 'var(--space-6)',
-                  borderRight: '1px solid var(--ivory-200)',
-                  borderBottom: '1px solid var(--ivory-200)',
-                  position: 'relative',
-                  transition: 'background 200ms',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 8,
+                  padding: 22,
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--ivory-50)')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--bg-elev)')}
               >
-                <Icon size={28} strokeWidth={1.4} color="var(--gold-700)" />
-                <h3 style={{ marginTop: 18, fontSize: 24 }}>{role.label}</h3>
-                <p style={{ marginTop: 12, fontSize: 14, color: 'var(--fg-muted)', lineHeight: 1.6 }}>
+                <div style={{ color: 'var(--gold-400)', marginBottom: 14 }}>
+                  <Icon size={22} />
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 8, color: 'var(--ivory-50)' }}>
+                  {role.label}
+                </div>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, margin: 0 }}>
                   {role.body}
                 </p>
               </div>
@@ -531,62 +580,55 @@ function RolesSection() {
   );
 }
 
-/* ----------------------------- MAP ----------------------------------- */
+/* ----------------------------- MAP SECTION ------------------------------- */
 function MapSection({ selectedCountry, selectedSectors, onSelectCountry, onSelectSector }) {
   return (
     <section
+      id="governments"
       style={{
         background: 'var(--ink-950)',
         color: 'var(--ivory-50)',
-        padding: 'var(--space-12) 0',
-        overflow: 'hidden',
+        padding: 'var(--space-10) 0',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
       }}
     >
       <div className="container">
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1.1fr',
-            gap: 'var(--space-10)',
-            alignItems: 'center',
-          }}
-          data-map-grid
-        >
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-8)', alignItems: 'center' }} data-map-grid>
           <div>
-            <div className="eyebrow" style={{ color: 'var(--gold-400)' }}>
-              Regional Footprint
-            </div>
-            <h2 style={{ marginTop: 12, color: 'var(--ivory-50)' }}>
+            <div className="eyebrow" style={{ color: 'var(--gold-400)' }}>Regional footprint</div>
+            <h2 style={{
+              marginTop: 'var(--space-3)',
+              fontSize: 'clamp(28px, 3vw, 38px)',
+              lineHeight: 1.15,
+              letterSpacing: '-0.01em',
+            }}>
               Built for SADC.{' '}
-              <span style={{ fontStyle: 'italic', color: 'var(--gold-400)' }}>
-                Designed for the continent.
-              </span>
+              <span style={{ fontStyle: 'italic', color: 'var(--gold-400)' }}>Designed for the continent.</span>
             </h2>
-            <p style={{ marginTop: 24, color: 'var(--ink-300)', fontSize: 16, lineHeight: 1.65, maxWidth: 480 }}>
-              SAREGO's geographic mandate is the 16 member states of the Southern African
-              Development Community, with active linkages into ECOWAS, EAC, and COMESA — built
-              for the deal flow that crosses borders.
+            <p style={{ marginTop: 'var(--space-4)', color: 'var(--ink-300)', fontSize: 15, lineHeight: 1.6, maxWidth: 480 }}>
+              SAREGO's geographic mandate is the 16 member states of the Southern African Development
+              Community, with active linkages into ECOWAS, EAC, and COMESA — built for the deal flow
+              that crosses borders.
             </p>
-
-            <div style={{ marginTop: 'var(--space-6)', display: 'grid', gap: 16 }}>
+            <ul style={{ marginTop: 'var(--space-5)', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <FeatureLine icon={Globe2}>22 active country profiles</FeatureLine>
               <FeatureLine icon={ShieldCheck}>KYC-grade verified counterparties</FeatureLine>
               <FeatureLine icon={Layers}>Multi-stage pipeline tracking</FeatureLine>
-            </div>
+            </ul>
           </div>
-
-          <div style={{ position: 'relative' }}>
-            <AfricaMap selectedCountry={selectedCountry} selectedSectors={selectedSectors} onSelectCountry={onSelectCountry} onSelectSector={onSelectSector} />
+          <div>
+            <AfricaMap
+              selectedCountry={selectedCountry}
+              selectedSectors={selectedSectors}
+              onSelectCountry={onSelectCountry}
+              onSelectSector={onSelectSector}
+            />
           </div>
         </div>
       </div>
-
       <style>{`
-        @media (max-width: 880px) {
-          [data-map-grid] {
-            grid-template-columns: 1fr !important;
-            gap: var(--space-6) !important;
-          }
+        @media (max-width: 920px) {
+          [data-map-grid] { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </section>
@@ -595,163 +637,115 @@ function MapSection({ selectedCountry, selectedSectors, onSelectCountry, onSelec
 
 function FeatureLine({ icon: Icon, children }) {
   return (
-    <div className="flex items-center gap-3" style={{ paddingBottom: 14, borderBottom: '1px solid var(--ink-800)' }}>
-      <Icon size={18} strokeWidth={1.5} color="var(--gold-400)" />
-      <span style={{ fontSize: 14, letterSpacing: '0.02em' }}>{children}</span>
-    </div>
+    <li style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: 'var(--ink-300)' }}>
+      <Icon size={16} style={{ color: 'var(--gold-400)' }} />
+      {children}
+    </li>
   );
 }
 
-/* ----------------------------- PILLARS ----------------------------------- */
+/* ----------------------------- PILLARS SECTION --------------------------- */
 function PillarsSection() {
   const pillars = [
     {
-      n: '01',
-      title: 'Investment Marketplace',
-      icon: TrendingUp,
-      body:
-        'A curated pipeline of bankable projects from governments, developers, and corporates — filtered by sector, stage, and capital structure.',
-    },
-    {
-      n: '02',
-      title: 'Trade Facilitation Hub',
-      icon: Globe2,
-      body:
-        'Cross-border opportunities, RFPs, and partnership listings purpose-built for SADC trade corridors and regional value chains.',
-    },
-    {
-      n: '03',
-      title: 'Government Interface',
-      icon: Landmark,
-      body:
-        'A direct channel for ministries and investment agencies to publish national priorities and engage vetted institutional capital.',
-    },
-    {
-      n: '04',
-      title: 'Project Pipeline Management',
       icon: FileText,
-      body:
-        'Stage-aware project tracking from origination through bankable, financing, and execution — with deal rooms and audit trails throughout.',
+      title: 'Verified pipeline',
+      body: 'Every project sponsor and counterparty completes institutional KYC before listing.',
+    },
+    {
+      icon: Lock,
+      title: 'Confidential deal rooms',
+      body: 'Document trails, member roles, and audit-grade access control for serious diligence.',
+    },
+    {
+      icon: TrendingUp,
+      title: 'Cross-border by design',
+      body: 'Engineered for capital, trade, and infrastructure flows that move across SADC.',
     },
   ];
 
   return (
-    <section style={{ padding: 'var(--space-12) 0' }}>
+    <section id="investors" style={{ padding: 'var(--space-10) 0' }}>
       <div className="container">
-        <div className="eyebrow">Four Pillars</div>
-        <h2 style={{ marginTop: 12, maxWidth: 800 }}>
-          One platform.{' '}
-          <span style={{ fontStyle: 'italic' }}>Four mandates.</span>
+        <div className="eyebrow" style={{ color: 'var(--ink-700)' }}>Why SAREGO</div>
+        <h2
+          style={{
+            marginTop: 'var(--space-3)',
+            fontSize: 'clamp(28px, 3vw, 38px)',
+            maxWidth: 760,
+            lineHeight: 1.15,
+            color: 'var(--ink-950)',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Institutional infrastructure for regional economic participation.
         </h2>
 
-        <div style={{ marginTop: 'var(--space-8)' }}>
+        <div
+          style={{
+            marginTop: 'var(--space-8)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 'var(--space-5)',
+          }}
+        >
           {pillars.map((p) => {
             const Icon = p.icon;
             return (
               <div
-                key={p.n}
+                key={p.title}
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '120px 1fr 60px',
-                  gap: 'var(--space-6)',
-                  padding: 'var(--space-6) 0',
-                  borderTop: '1px solid var(--ivory-200)',
-                  alignItems: 'start',
-                  position: 'relative',
-                  transition: 'padding-left 250ms ease',
+                  background: 'var(--ivory-50)',
+                  border: '1px solid var(--ink-200)',
+                  borderRadius: 6,
+                  padding: 24,
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.paddingLeft = '12px')}
-                onMouseLeave={(e) => (e.currentTarget.style.paddingLeft = '0')}
-                data-pillar-row
               >
-                <div
-                  className="mono"
-                  style={{ fontSize: 14, color: 'var(--gold-700)', letterSpacing: '0.16em' }}
-                >
-                  {p.n}
+                <div style={{ color: 'var(--gold-400)', marginBottom: 14 }}>
+                  <Icon size={22} />
                 </div>
-                <div>
-                  <h3 style={{ fontSize: 28 }}>{p.title}</h3>
-                  <p style={{ marginTop: 12, fontSize: 15, color: 'var(--fg-muted)', maxWidth: 640 }}>
-                    {p.body}
-                  </p>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <Icon size={24} strokeWidth={1.4} color="var(--ink-950)" />
-                </div>
+                <h3 style={{ fontSize: 17, fontWeight: 500, marginBottom: 10, color: 'var(--ink-950)' }}>
+                  {p.title}
+                </h3>
+                <p style={{ fontSize: 14, color: 'var(--ink-700)', lineHeight: 1.6, margin: 0 }}>
+                  {p.body}
+                </p>
               </div>
             );
           })}
-          <div style={{ borderTop: '1px solid var(--ivory-200)' }} />
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 720px) {
-          [data-pillar-row] {
-            grid-template-columns: 60px 1fr !important;
-          }
-          [data-pillar-row] > div:last-child {
-            grid-column: 1 / -1;
-            text-align: left !important;
-          }
-        }
-      `}</style>
     </section>
   );
 }
 
-/* ----------------------------- CTA ----------------------------------- */
+/* ----------------------------- CTA SECTION ------------------------------- */
 function CTASection() {
   return (
     <section
       style={{
-        background: 'var(--ivory-100)',
-        padding: 'var(--space-12) 0',
-        position: 'relative',
-        overflow: 'hidden',
+        background: 'var(--ink-950)',
+        color: 'var(--ivory-50)',
+        padding: 'var(--space-10) 0',
+        textAlign: 'center',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
       }}
     >
-      {/* Decorative serif quote mark */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: 30,
-          right: 60,
-          fontSize: 320,
-          fontFamily: 'var(--font-display)',
-          color: 'var(--gold-200)',
-          opacity: 0.6,
-          lineHeight: 0.8,
-          fontWeight: 500,
-          pointerEvents: 'none',
-        }}
-      >
-        §
-      </div>
-
-      <div className="container" style={{ position: 'relative', maxWidth: 880 }}>
-        <div className="eyebrow">Membership Inquiry</div>
-        <h2 style={{ marginTop: 16, fontSize: 'clamp(36px, 5vw, 60px)', maxWidth: 720, lineHeight: 1.05 }}>
-          The pipeline that moves the region forward —{' '}
-          <span style={{ fontStyle: 'italic' }}>requested by invitation.</span>
+      <div className="container">
+        <h2 style={{ fontSize: 'clamp(28px, 3vw, 40px)', maxWidth: 720, margin: '0 auto', lineHeight: 1.15 }}>
+          A single window into the SADC pipeline.
         </h2>
-
-        <p style={{ marginTop: 24, fontSize: 17, color: 'var(--fg-muted)', maxWidth: 580, lineHeight: 1.6 }}>
-          SAREGO is access-controlled. Each account is verified to institutional standards
-          before joining the marketplace. Submit your organization's profile to begin onboarding.
+        <p style={{ marginTop: 'var(--space-4)', color: 'var(--ink-300)', maxWidth: 560, margin: '18px auto 0', fontSize: 16, lineHeight: 1.55 }}>
+          Verified counterparties. Confidential deal rooms. Live opportunity flow across the region.
         </p>
-
-        <div className="flex gap-3" style={{ marginTop: 32, flexWrap: 'wrap' }}>
-          <Link to="/login?mode=register" className="btn btn-primary">
-            Request Access
+        <div style={{ marginTop: 'var(--space-7)', display: 'inline-flex', gap: 14, flexWrap: 'wrap' }}>
+          <Link to="/trade-hub" className="btn btn-gold">
+            Explore Opportunities
             <ArrowUpRight size={16} />
           </Link>
-          <a href="#" className="btn btn-ghost">
-            <Lock size={14} />
-            Compliance & Governance
-          </a>
+          <Link to="/login?mode=register" className="btn btn-ghost-light">
+            Request Platform Access
+          </Link>
         </div>
       </div>
     </section>
