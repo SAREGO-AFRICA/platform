@@ -76,11 +76,40 @@ const CREATE_SCHEMAS = {
     quantity_unit: z.string().trim().max(40).optional().nullable(),
     incoterms:     z.string().trim().max(80).optional().nullable(),
   }),
-  // Schemas for logistics_load / agri_offtake / tender added in Session B
+
+  agri_offtake: z.object({
+    ...COMMON_FIELDS,
+    crop:                  z.string().trim().min(2).max(120),
+    quantity_tons:         z.union([z.number().positive(), z.null()]).optional(),
+    delivery_window_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+    delivery_window_end:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  }),
+
+  tender: z.object({
+    ...COMMON_FIELDS,
+    tender_reference:    z.string().trim().max(120).optional().nullable(),
+    issuing_authority:   z.string().trim().min(2).max(200),
+    tender_type:         z.enum(['PPP', 'procurement', 'consultancy']),
+    submission_deadline: z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional().nullable(),
+  }),
+
+  logistics_load: z.object({
+    ...COMMON_FIELDS,
+    origin_country_iso:      z.string().trim().regex(/^[A-Z]{2}$/, 'Origin country must be 2-letter ISO').optional().nullable(),
+    origin_city:             z.string().trim().max(120).optional().nullable(),
+    destination_country_iso: z.string().trim().regex(/^[A-Z]{2}$/, 'Destination country must be 2-letter ISO').optional().nullable(),
+    destination_city:        z.string().trim().max(120).optional().nullable(),
+    cargo_type:              z.string().trim().min(2).max(160),
+    weight_tons:             z.union([z.number().positive(), z.null()]).optional(),
+    load_date:               z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  }),
 };
 
 const UPDATE_SCHEMAS = {
   commodity_request: CREATE_SCHEMAS.commodity_request.partial(),
+  agri_offtake:      CREATE_SCHEMAS.agri_offtake.partial(),
+  tender:            CREATE_SCHEMAS.tender.partial(),
+  logistics_load:    CREATE_SCHEMAS.logistics_load.partial(),
 };
 
 // Whitelist of insertable/updatable columns per vertical (prevents
@@ -89,6 +118,19 @@ const TYPE_COLUMN_MAP = {
   commodity_request: [
     'title', 'summary', 'country_iso', 'value_usd', 'expires_at',
     'commodity', 'quantity', 'quantity_unit', 'incoterms',
+  ],
+  agri_offtake: [
+    'title', 'summary', 'country_iso', 'value_usd', 'expires_at',
+    'crop', 'quantity_tons', 'delivery_window_start', 'delivery_window_end',
+  ],
+  tender: [
+    'title', 'summary', 'country_iso', 'value_usd', 'expires_at',
+    'tender_reference', 'issuing_authority', 'tender_type', 'submission_deadline',
+  ],
+  logistics_load: [
+    'title', 'summary', 'country_iso', 'value_usd', 'expires_at',
+    'origin_country_iso', 'origin_city', 'destination_country_iso', 'destination_city',
+    'cargo_type', 'weight_tons', 'load_date',
   ],
 };
 

@@ -1,9 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-
 import './styles/global.css';
-import './i18n';
 import './i18n';
 import LandingPage from './pages/LandingPage.jsx';
 import InvestorDashboard from './pages/InvestorDashboard.jsx';
@@ -16,7 +14,10 @@ import GovernmentsPage from './pages/GovernmentsPage.jsx';
 import TradeHubPage from './pages/TradeHubPage.jsx';
 import OpportunityDetailPage from './pages/OpportunityDetailPage.jsx';
 import CommodityRequestFormPage from './pages/CommodityRequestFormPage.jsx';
-   import MyListingsPage from './pages/MyListingsPage.jsx';
+import AgriOfftakeFormPage from './pages/AgriOfftakeFormPage.jsx';
+import TenderFormPage from './pages/TenderFormPage.jsx';
+import LogisticsLoadFormPage from './pages/LogisticsLoadFormPage.jsx';
+import MyListingsPage from './pages/MyListingsPage.jsx';
 import KycPage from './pages/KycPage.jsx';
 import DealRoomsListPage from './pages/DealRoomsListPage.jsx';
 import DealRoomPage from './pages/DealRoomPage.jsx';
@@ -30,16 +31,25 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/dashboard" element={<InvestorDashboard />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/kyc" element={<KycPage />} />
-<Route path="/deal-rooms" element={<DealRoomsListPage />} />
-<Route path="/deal-rooms/:id" element={<DealRoomPage />} />
-        {/* Project form routes — defined BEFORE /:slug so they take priority */}
+        <Route path="/deal-rooms" element={<DealRoomsListPage />} />
+        <Route path="/deal-rooms/:id" element={<DealRoomPage />} />
         <Route path="/investors" element={<InvestorsPage />} />
         <Route path="/governments" element={<GovernmentsPage />} />
         <Route path="/trade-hub" element={<TradeHubPage />} />
+        <Route path="/my-listings" element={<MyListingsPage />} />
+
+        {/* Opportunity form routes — static paths declared BEFORE dynamic :type/:id */}
         <Route path="/opportunities/commodity_request/new" element={<CommodityRequestFormPage />} />
-           <Route path="/opportunities/commodity_request/:id/edit" element={<CommodityRequestFormPage />} />
-           <Route path="/my-listings" element={<MyListingsPage />} />
-           <Route path="/opportunities/:type/:id" element={<OpportunityDetailPage />} />
+        <Route path="/opportunities/commodity_request/:id/edit" element={<CommodityRequestFormPage />} />
+        <Route path="/opportunities/agri_offtake/new" element={<AgriOfftakeFormPage />} />
+        <Route path="/opportunities/agri_offtake/:id/edit" element={<AgriOfftakeFormPage />} />
+        <Route path="/opportunities/tender/new" element={<TenderFormPage />} />
+        <Route path="/opportunities/tender/:id/edit" element={<TenderFormPage />} />
+        <Route path="/opportunities/logistics_load/new" element={<LogisticsLoadFormPage />} />
+        <Route path="/opportunities/logistics_load/:id/edit" element={<LogisticsLoadFormPage />} />
+        <Route path="/opportunities/:type/:id" element={<OpportunityDetailPage />} />
+
+        {/* Project routes — defined BEFORE /:slug so they take priority */}
         <Route path="/projects/new" element={<ProjectFormPage />} />
         <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
         <Route path="/projects/:slug" element={<ProjectDetailPage />} />
