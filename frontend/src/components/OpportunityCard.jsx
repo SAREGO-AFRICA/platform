@@ -1,26 +1,20 @@
 import React from 'react';
-import { Users, Clock, Shield, MapPin, ArrowUpRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Users, Clock, Shield, MapPin } from 'lucide-react';
 
 /**
  * OpportunityCard — single card representing any opportunity-stream event.
- * Works for projects, commodity_requests, logistics_loads, agri_offtake_requests,
- * tenders, and interest/deal-room events.
- *
- * Props:
- *   event       { type, title, country_iso, value_usd, applicants_count,
- *                 verified_level, owner_label, timestamp, metadata, slug? }
- *   compact     boolean — denser layout
- *   onClick     fn — optional click handler
+ * Now clickable: routes to /opportunities/:type/:id where applicable.
  */
 
 const TYPE_META = {
-  project_published:       { label: 'Project',          color: '#dcc068' },
-  tender_posted:           { label: 'Tender',           color: '#6ec3c9' },
-  commodity_request_posted:{ label: 'Commodity',        color: '#c97b7b' },
-  logistics_load_posted:   { label: 'Logistics',        color: '#5d8aa8' },
-  agri_offtake_posted:     { label: 'Agri Offtake',     color: '#7fb069' },
-  interest_expressed:      { label: 'Investor Interest', color: '#a888c2' },
-  deal_room_opened:        { label: 'Deal Room',        color: '#e2a45e' },
+  project_published:        { label: 'Project',           color: '#dcc068', verticalType: null },
+  tender_posted:            { label: 'Tender',            color: '#6ec3c9', verticalType: 'tender' },
+  commodity_request_posted: { label: 'Commodity',         color: '#c97b7b', verticalType: 'commodity_request' },
+  logistics_load_posted:    { label: 'Logistics',         color: '#5d8aa8', verticalType: 'logistics_load' },
+  agri_offtake_posted:      { label: 'Agri Offtake',      color: '#7fb069', verticalType: 'agri_offtake' },
+  interest_expressed:       { label: 'Investor Interest', color: '#a888c2', verticalType: null },
+  deal_room_opened:         { label: 'Deal Room',         color: '#e2a45e', verticalType: null },
 };
 
 const VERIFIED_LABEL = {
@@ -30,17 +24,41 @@ const VERIFIED_LABEL = {
   institutional: 'Institutional',
 };
 
-export default function OpportunityCard({ event, compact = false, onClick }) {
+/**
+ * Extract a UUID from the event.id prefix used by /api/activity.
+ * Examples: "tender-054f8fbe-...." -> "054f8fbe-..."
+ *           "commodity-d00f62aa-..." -> "d00f62aa-..."
+ */
+function extractUuid(eventId) {
+  if (!eventId) return null;
+  const m = eventId.match(/^[a-z]+-([0-9a-f-]{36})$/i);
+  return m ? m[1] : null;
+}
+
+function getLinkTo(event) {
+  const meta = TYPE_META[event.type];
+  if (!meta) return null;
+  // Vertical opportunity types route to /opportunities/:type/:id
+  if (meta.verticalType) {
+    const uuid = extractUuid(event.id);
+    return uuid ? `/opportunities/${meta.verticalType}/${uuid}` : null;
+  }
+  // Project / interest / deal-room events route to the project page
+  if ((event.type === 'project_published' || event.type === 'interest_expressed' || event.type === 'deal_room_opened') && event.slug) {
+    return `/projects/${event.slug}`;
+  }
+  return null;
+}
+
+export default function OpportunityCard({ event, compact = false }) {
   if (!event) return null;
   const meta = TYPE_META[event.type] || { label: 'Activity', color: '#9aa3b2' };
   const verifiedLabel = VERIFIED_LABEL[event.verified_level];
   const timeAgo = formatTimeAgo(event.timestamp);
+  const linkTo = getLinkTo(event);
 
-  return (
+  const card = (
     <div
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
       style={{
         background: 'rgba(255,255,255,0.03)',
         border: '1px solid rgba(255,255,255,0.08)',
@@ -49,8 +67,8 @@ export default function OpportunityCard({ event, compact = false, onClick }) {
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
-        cursor: onClick ? 'pointer' : 'default',
         transition: 'border-color 150ms, background 150ms',
+        cursor: linkTo ? 'pointer' : 'default',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = 'rgba(220,192,104,0.3)';
@@ -85,7 +103,7 @@ export default function OpportunityCard({ event, compact = false, onClick }) {
         {event.title}
       </div>
 
-      {/* Meta row: country, value, applicants */}
+      {/* Meta row */}
       <div
         style={{
           display: 'flex',
@@ -125,6 +143,15 @@ export default function OpportunityCard({ event, compact = false, onClick }) {
       </div>
     </div>
   );
+
+  if (linkTo) {
+    return (
+      <Link to={linkTo} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+        {card}
+      </Link>
+    );
+  }
+  return card;
 }
 
 function formatUSDShort(n) {
