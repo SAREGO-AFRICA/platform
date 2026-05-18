@@ -1,11 +1,15 @@
 // src/routes/opportunities.js
 // Opportunity verticals endpoints.
 //
-//   GET  /api/opportunities/corridors
-//   GET  /api/opportunities/featured             — homepage snapshot (one per vertical)
-//   GET  /api/opportunities/:type                — list
-//   GET  /api/opportunities/:type/:id            — single fetch
-//   POST /api/opportunities/:type/:id/interest   — express interest (auth + verified)
+//   GET    /api/opportunities/corridors
+//   GET    /api/opportunities/featured                 — homepage snapshot
+//   GET    /api/opportunities/mine?type=               — my own listings (auth)
+//   GET    /api/opportunities/:type                    — list
+//   POST   /api/opportunities/:type                    — create (auth + verified)
+//   GET    /api/opportunities/:type/:id                — single fetch
+//   PATCH  /api/opportunities/:type/:id                — edit (owner only)
+//   DELETE /api/opportunities/:type/:id                — soft-delete (owner only)
+//   POST   /api/opportunities/:type/:id/interest       — express interest
 
 import { Router } from 'express';
 import { z } from 'zod';
@@ -50,17 +54,47 @@ function normaliseRow(row) {
 }
 
 // ============================================================
-// GET /api/opportunities/featured
-// Returns one opportunity per vertical for the homepage snapshot.
-// Selection logic (tonight, dumb):
-//   - status = 'published'
-//   - not yet expired (expires_at > now or NULL)
-//   - prefer verified/institutional tier when available
-//   - then most recent published_at
-// Future intelligence (e.g. engagement velocity, sponsored ordering,
-// corridor balancing) replaces the SQL without changing response shape.
+// Zod schemas per vertical
 // ============================================================
-// In-memory 30s cache
+// Each vertical has a CREATE schema (full required fields) and an UPDATE
+// schema (all optional). Common base fields used everywhere:
+//   title, summary, country_iso, value_usd, expires_at
+
+const COMMON_FIELDS = {
+  title:       z.string().trim().min(5,  'Title must be at least 5 characters').max(200),
+  summary:     z.string().trim().min(20, 'Summary must be at least 20 characters').max(2000),
+  country_iso: z.string().trim().regex(/^[A-Z]{2}$/, 'Country must be a 2-letter ISO code'),
+  value_usd:   z.union([z.number().nonnegative(), z.null()]).optional(),
+  expires_at:  z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
+};
+
+const CREATE_SCHEMAS = {
+  commodity_request: z.object({
+    ...COMMON_FIELDS,
+    commodity:     z.string().trim().min(2).max(200),
+    quantity:      z.union([z.number().positive(), z.null()]).optional(),
+    quantity_unit: z.string().trim().max(40).optional().nullable(),
+    incoterms:     z.string().trim().max(80).optional().nullable(),
+  }),
+  // Schemas for logistics_load / agri_offtake / tender added in Session B
+};
+
+const UPDATE_SCHEMAS = {
+  commodity_request: CREATE_SCHEMAS.commodity_request.partial(),
+};
+
+// Whitelist of insertable/updatable columns per vertical (prevents
+// mass-assignment of system fields like applicants_count, owner_user_id)
+const TYPE_COLUMN_MAP = {
+  commodity_request: [
+    'title', 'summary', 'country_iso', 'value_usd', 'expires_at',
+    'commodity', 'quantity', 'quantity_unit', 'incoterms',
+  ],
+};
+
+// ============================================================
+// GET /api/opportunities/featured  — homepage snapshot
+// ============================================================
 let _featuredCache = null;
 let _featuredCachedAt = 0;
 const FEATURED_TTL_MS = 30 * 1000;
@@ -73,15 +107,12 @@ router.get(
       return res.json(_featuredCache);
     }
 
-    // ORDER BY clause: institutional first, then verified, then basic, then unverified,
-    // then most recent.
     const tierOrder = `CASE verified_level
                          WHEN 'institutional' THEN 0
                          WHEN 'verified'      THEN 1
                          WHEN 'basic'         THEN 2
                          WHEN 'unverified'    THEN 3
                          ELSE 4 END`;
-
     const futureClause = `(expires_at IS NULL OR expires_at > now())`;
 
     const [commodityRes, logisticsRes, agriRes, tendersRes, projectsRes] = await Promise.all([
@@ -129,7 +160,6 @@ router.get(
          ORDER BY ${tierOrder}, published_at DESC
          LIMIT 1
       `),
-      // Projects: normalise to opportunity shape so frontend doesn't branch.
       query(`
         SELECT p.id, p.title, p.summary, c.iso_code AS country_iso,
                p.capital_required_usd AS value_usd, p.status,
@@ -152,7 +182,6 @@ router.get(
       agri_offtake:      normaliseRow(agriRes.rows[0]),
       tender:            normaliseRow(tendersRes.rows[0]),
       investment_project: normaliseRow(projectsRes.rows[0]),
-      // trade_finance: null,  // reserved for when that vertical is built
     };
 
     _featuredCache = { featured, cachedAt: new Date().toISOString() };
@@ -162,7 +191,7 @@ router.get(
 );
 
 // ============================================================
-// GET /api/opportunities/corridors  (trade corridors reference)
+// GET /api/opportunities/corridors
 // ============================================================
 router.get(
   '/corridors',
@@ -178,7 +207,41 @@ router.get(
 );
 
 // ============================================================
-// GET /api/opportunities/:type     — list
+// GET /api/opportunities/mine  — listings owned by current user
+// ============================================================
+router.get(
+  '/mine',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const typeFilter = req.query.type?.toString();
+    const types = typeFilter && TYPE_TO_TABLE[typeFilter]
+      ? [typeFilter]
+      : Object.keys(TYPE_TO_TABLE);
+
+    const results = {};
+    await Promise.all(types.map(async (type) => {
+      const table = TYPE_TO_TABLE[type];
+      const extras = TYPE_EXTRAS[table];
+      const r = await query(
+        `SELECT id, title, summary, country_iso, value_usd, status,
+                verified_level, expires_at, applicants_count,
+                owner_user_id, owner_org_id, source_type, metadata,
+                ${extras},
+                published_at, created_at, updated_at
+           FROM ${table}
+          WHERE owner_user_id = $1
+          ORDER BY created_at DESC`,
+        [req.user.id]
+      );
+      results[type] = r.rows.map(normaliseRow);
+    }));
+
+    res.json({ listings: results });
+  })
+);
+
+// ============================================================
+// GET /api/opportunities/:type  — list (public)
 // ============================================================
 router.get(
   '/:type',
@@ -202,7 +265,6 @@ router.get(
     }
 
     const extras = TYPE_EXTRAS[table];
-
     const sql = `
       SELECT id, title, summary, country_iso, value_usd, status,
              verified_level, expires_at, applicants_count,
@@ -221,6 +283,64 @@ router.get(
       total: r.rows.length,
       opportunities: r.rows.map(normaliseRow),
     });
+  })
+);
+
+// ============================================================
+// POST /api/opportunities/:type  — create (auth + verified)
+// ============================================================
+router.post(
+  '/:type',
+  requireAuth,
+  requireTrustTier('verified'),
+  asyncHandler(async (req, res) => {
+    const type = req.params.type;
+    const table = tableForType(type);
+    const schema = CREATE_SCHEMAS[type];
+    if (!schema) {
+      throw new HttpError(501, `Creating '${type}' listings is not yet enabled. Coming in a future release.`);
+    }
+
+    const data = schema.parse(req.body || {});
+    const allowedCols = TYPE_COLUMN_MAP[type];
+
+    // Look up user's organization for owner_org_id attribution
+    const userRes = await query(
+      `SELECT organization_id, trust_tier FROM users WHERE id = $1`,
+      [req.user.id]
+    );
+    const orgId = userRes.rows[0]?.organization_id ?? null;
+    const userTier = userRes.rows[0]?.trust_tier || 'verified';
+
+    // Build INSERT dynamically from validated payload (only whitelisted columns)
+    const insertCols = [];
+    const insertVals = [];
+    const placeholders = [];
+    let pi = 0;
+    for (const col of allowedCols) {
+      if (data[col] !== undefined) {
+        pi += 1;
+        insertCols.push(col);
+        insertVals.push(data[col]);
+        placeholders.push(`$${pi}`);
+      }
+    }
+
+    // System-managed fields
+    insertCols.push('owner_user_id', 'owner_org_id', 'source_type', 'status', 'verified_level');
+    pi += 1; insertVals.push(req.user.id);       placeholders.push(`$${pi}`);
+    pi += 1; insertVals.push(orgId);              placeholders.push(`$${pi}`);
+    pi += 1; insertVals.push('user_generated');   placeholders.push(`$${pi}`);
+    pi += 1; insertVals.push('published');        placeholders.push(`$${pi}`);
+    pi += 1; insertVals.push(userTier);           placeholders.push(`$${pi}`);
+
+    const sql = `
+      INSERT INTO ${table} (${insertCols.join(', ')})
+      VALUES (${placeholders.join(', ')})
+      RETURNING *
+    `;
+    const r = await query(sql, insertVals);
+    res.status(201).json({ opportunity: normaliseRow(r.rows[0]) });
   })
 );
 
@@ -293,6 +413,95 @@ router.get(
       ownerOrg,
       userInterest,
     });
+  })
+);
+
+// ============================================================
+// PATCH /api/opportunities/:type/:id  — edit (owner only)
+// ============================================================
+router.patch(
+  '/:type/:id',
+  requireAuth,
+  requireTrustTier('verified'),
+  asyncHandler(async (req, res) => {
+    const type = req.params.type;
+    const table = tableForType(type);
+    const id = req.params.id;
+    const schema = UPDATE_SCHEMAS[type];
+    if (!schema) {
+      throw new HttpError(501, `Editing '${type}' listings is not yet enabled.`);
+    }
+
+    const ownerRes = await query(
+      `SELECT owner_user_id FROM ${table} WHERE id = $1`,
+      [id]
+    );
+    if (!ownerRes.rows[0]) throw new HttpError(404, 'Opportunity not found');
+    if (ownerRes.rows[0].owner_user_id !== req.user.id) {
+      throw new HttpError(403, 'You can only edit your own listings.');
+    }
+
+    const data = schema.parse(req.body || {});
+    const allowedCols = TYPE_COLUMN_MAP[type];
+
+    const setClauses = [];
+    const values = [];
+    let pi = 0;
+    for (const col of allowedCols) {
+      if (data[col] !== undefined) {
+        pi += 1;
+        setClauses.push(`${col} = $${pi}`);
+        values.push(data[col]);
+      }
+    }
+
+    if (setClauses.length === 0) {
+      const cur = await query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
+      return res.json({ opportunity: normaliseRow(cur.rows[0]) });
+    }
+
+    pi += 1;
+    values.push(id);
+    const sql = `
+      UPDATE ${table}
+         SET ${setClauses.join(', ')}, updated_at = now()
+       WHERE id = $${pi}
+       RETURNING *
+    `;
+    const r = await query(sql, values);
+    res.json({ opportunity: normaliseRow(r.rows[0]) });
+  })
+);
+
+// ============================================================
+// DELETE /api/opportunities/:type/:id  — soft-delete (owner only)
+// ============================================================
+router.delete(
+  '/:type/:id',
+  requireAuth,
+  requireTrustTier('verified'),
+  asyncHandler(async (req, res) => {
+    const type = req.params.type;
+    const table = tableForType(type);
+    const id = req.params.id;
+
+    const ownerRes = await query(
+      `SELECT owner_user_id, status FROM ${table} WHERE id = $1`,
+      [id]
+    );
+    if (!ownerRes.rows[0]) throw new HttpError(404, 'Opportunity not found');
+    if (ownerRes.rows[0].owner_user_id !== req.user.id) {
+      throw new HttpError(403, 'You can only close your own listings.');
+    }
+
+    const r = await query(
+      `UPDATE ${table}
+          SET status = 'closed', updated_at = now()
+        WHERE id = $1
+        RETURNING *`,
+      [id]
+    );
+    res.json({ opportunity: normaliseRow(r.rows[0]) });
   })
 );
 
