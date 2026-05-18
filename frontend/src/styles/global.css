@@ -294,3 +294,11 @@ p  { margin: 0 0 1em; max-width: 68ch; }
 .text-xs { font-size: 11px; }
 .uppercase { text-transform: uppercase; letter-spacing: 0.12em; }
 .italic { font-style: italic; }
+
+/* Dark-theme select option styling — without this, native dropdowns appear
+   with default light backgrounds on Chrome/Firefox/Safari, making text
+   unreadable against the page's dark form fields. */
+select option {
+  background: #1a1a1a;
+  color: #faf6ee;
+}
