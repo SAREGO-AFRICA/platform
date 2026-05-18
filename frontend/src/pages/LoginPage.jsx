@@ -163,6 +163,7 @@ export default function LoginPage() {
 
 function LoginForm() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
