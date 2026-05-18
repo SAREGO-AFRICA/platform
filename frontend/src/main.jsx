@@ -15,6 +15,8 @@ import InvestorsPage from './pages/InvestorsPage.jsx';
 import GovernmentsPage from './pages/GovernmentsPage.jsx';
 import TradeHubPage from './pages/TradeHubPage.jsx';
 import OpportunityDetailPage from './pages/OpportunityDetailPage.jsx';
+import CommodityRequestFormPage from './pages/CommodityRequestFormPage.jsx';
+   import MyListingsPage from './pages/MyListingsPage.jsx';
 import KycPage from './pages/KycPage.jsx';
 import DealRoomsListPage from './pages/DealRoomsListPage.jsx';
 import DealRoomPage from './pages/DealRoomPage.jsx';
@@ -34,7 +36,10 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/investors" element={<InvestorsPage />} />
         <Route path="/governments" element={<GovernmentsPage />} />
         <Route path="/trade-hub" element={<TradeHubPage />} />
-        <Route path="/opportunities/:type/:id" element={<OpportunityDetailPage />} />
+        <Route path="/opportunities/commodity_request/new" element={<CommodityRequestFormPage />} />
+           <Route path="/opportunities/commodity_request/:id/edit" element={<CommodityRequestFormPage />} />
+           <Route path="/my-listings" element={<MyListingsPage />} />
+           <Route path="/opportunities/:type/:id" element={<OpportunityDetailPage />} />
         <Route path="/projects/new" element={<ProjectFormPage />} />
         <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
         <Route path="/projects/:slug" element={<ProjectDetailPage />} />

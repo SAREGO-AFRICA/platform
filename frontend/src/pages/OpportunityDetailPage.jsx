@@ -1,17 +1,14 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Calendar, Users, Shield, Clock, FileText,
-  Building2, Truck, Package, Sprout, Briefcase, AlertCircle, Check,
+  Building2, Truck, Package, Sprout, Briefcase, AlertCircle, Check, Pencil, Lock,
 } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
 import { api, getAccessToken } from '../lib/api.js';
 
-// ============================================================
-// Type metadata
-// ============================================================
 const TYPE_META = {
   commodity_request: {
     label: 'Commodity Request',
@@ -46,22 +43,20 @@ const VERIFIED_TIER = {
   institutional: { label: 'Institutional', color: 'var(--gold-400, #dcc068)' },
 };
 
-// ============================================================
-// Main component
-// ============================================================
 export default function OpportunityDetailPage() {
   const { type, id } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [me, setMe] = useState(null);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [justSubmitted, setJustSubmitted] = useState(false);
+  const [closeState, setCloseState] = useState(null); // null | 'confirming' | 'submitting'
 
   const meta = TYPE_META[type];
   const isLoggedIn = !!getAccessToken();
 
-  // Fetch detail with auth header (so userInterest gets populated when logged in)
   useEffect(() => {
     if (!meta) {
       setError('Unknown opportunity type');
@@ -70,14 +65,20 @@ export default function OpportunityDetailPage() {
     let cancelled = false;
     (async () => {
       try {
-        const result = await api(`/api/opportunities/${type}/${id}`);
-        if (!cancelled) setData(result);
+        const [result, meResult] = await Promise.all([
+          api(`/api/opportunities/${type}/${id}`),
+          isLoggedIn ? api('/api/auth/me').catch(() => null) : Promise.resolve(null),
+        ]);
+        if (!cancelled) {
+          setData(result);
+          setMe(meResult?.user || null);
+        }
       } catch (err) {
         if (!cancelled) setError(err.message || 'Could not load this opportunity');
       }
     })();
     return () => { cancelled = true; };
-  }, [type, id, meta]);
+  }, [type, id, meta, isLoggedIn]);
 
   async function handleExpressInterest() {
     if (!isLoggedIn) {
@@ -99,7 +100,6 @@ export default function OpportunityDetailPage() {
       setJustSubmitted(true);
       setTimeout(() => setJustSubmitted(false), 4000);
     } catch (err) {
-      // Server might return 403 if not verified; surface a useful message
       const msg = err.message || 'Could not express interest right now.';
       if (msg.includes('403') || msg.toLowerCase().includes('verified')) {
         setSubmitError('Verified KYC status is required to express interest. Complete KYC to continue.');
@@ -111,11 +111,31 @@ export default function OpportunityDetailPage() {
     }
   }
 
-  // ----- Render guards -----
+  async function handleCloseListing() {
+    if (closeState !== 'confirming') {
+      setCloseState('confirming');
+      setTimeout(() => {
+        setCloseState((cur) => cur === 'confirming' ? null : cur);
+      }, 4000);
+      return;
+    }
+
+    setCloseState('submitting');
+    try {
+      const result = await api(`/api/opportunities/${type}/${id}`, { method: 'DELETE' });
+      setData((prev) => prev ? {
+        ...prev,
+        opportunity: { ...prev.opportunity, status: result.opportunity.status },
+      } : prev);
+      setCloseState(null);
+    } catch (err) {
+      setSubmitError(err.message || 'Could not close the listing');
+      setCloseState(null);
+    }
+  }
+
   if (!meta) {
-    return (
-      <ErrorShell message="Unknown opportunity type" />
-    );
+    return <ErrorShell message="Unknown opportunity type" />;
   }
   if (error) {
     return <ErrorShell message={error} />;
@@ -124,17 +144,18 @@ export default function OpportunityDetailPage() {
     return <LoadingShell />;
   }
 
-  const { opportunity: opp, userInterest } = data;
+  const { opportunity: opp, userInterest, owner } = data;
   const Icon = meta.icon;
   const verifiedTier = VERIFIED_TIER[opp.verified_level] || VERIFIED_TIER.unverified;
   const expiresLabel = formatExpiresIn(opp.expires_at);
   const isUrgent = expiresLabel?.urgent;
+  const isOwner = me?.id && owner?.id && me.id === owner.id;
+  const isClosed = opp.status === 'closed';
 
   return (
     <div style={{ background: 'var(--ink-950)', color: 'var(--ivory-50)', minHeight: '100vh' }}>
       <Header variant="dark" />
 
-      {/* Breadcrumb */}
       <div style={{ padding: '24px 0 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="container" style={{ paddingBottom: 16 }}>
           <nav style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -149,7 +170,6 @@ export default function OpportunityDetailPage() {
         </div>
       </div>
 
-      {/* Hero */}
       <section style={{ padding: '48px 0 36px', position: 'relative', overflow: 'hidden' }}>
         <div className="container" style={{ position: 'relative' }}>
           <Link
@@ -178,6 +198,11 @@ export default function OpportunityDetailPage() {
             {verifiedTier.label !== 'Unverified' && (
               <VerifiedBadge tier={verifiedTier} />
             )}
+            {isClosed && (
+              <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#e2a4a4', border: '1px solid rgba(201,123,123,0.4)', padding: '4px 10px', borderRadius: 999 }}>
+                Closed
+              </span>
+            )}
             {opp.metadata?.demo && (
               <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.15)', padding: '4px 10px', borderRadius: 999 }}>
                 Demo listing
@@ -201,7 +226,6 @@ export default function OpportunityDetailPage() {
             </p>
           )}
 
-          {/* Metrics row */}
           <div
             style={{
               marginTop: 36,
@@ -211,31 +235,17 @@ export default function OpportunityDetailPage() {
             }}
           >
             {opp.value_usd != null && opp.value_usd > 0 && (
-              <Metric
-                label="Indicative Value"
-                value={formatUSDLong(opp.value_usd)}
-                accent="var(--gold-400, #dcc068)"
-              />
+              <Metric label="Indicative Value" value={formatUSDLong(opp.value_usd)} accent="var(--gold-400, #dcc068)" />
             )}
-            <Metric
-              label="Country"
-              value={countryDisplay(opp)}
-              icon={<MapPin size={14} />}
-            />
+            <Metric label="Country" value={countryDisplay(opp)} icon={<MapPin size={14} />} />
             <ApplicantsMetric count={opp.applicants_count} pulsing />
             {expiresLabel && (
-              <Metric
-                label="Closes"
-                value={expiresLabel.text}
-                icon={<Clock size={14} />}
-                urgent={isUrgent}
-              />
+              <Metric label="Closes" value={expiresLabel.text} icon={<Clock size={14} />} urgent={isUrgent} />
             )}
           </div>
         </div>
       </section>
 
-      {/* Body: type-specific panel + sticky CTA rail */}
       <section style={{ padding: '20px 0 64px' }}>
         <div className="container">
           <div
@@ -247,7 +257,6 @@ export default function OpportunityDetailPage() {
             }}
             data-detail-grid
           >
-            {/* Left: type-specific detail panel */}
             <div>
               <Panel title="Listing Detail">
                 {renderTypePanel(type, opp)}
@@ -274,20 +283,33 @@ export default function OpportunityDetailPage() {
               )}
             </div>
 
-            {/* Right: sticky CTA rail */}
             <aside style={{ position: 'sticky', top: 100 }} data-detail-aside>
-              <CtaRail
-                isLoggedIn={isLoggedIn}
-                userInterest={userInterest}
-                opportunityType={type}
-                opportunityId={id}
-                submitting={submitting}
-                submitError={submitError}
-                justSubmitted={justSubmitted}
-                onSubmit={handleExpressInterest}
-                applicantsCount={opp.applicants_count}
-                expiresLabel={expiresLabel}
-              />
+              {isOwner ? (
+                <OwnerRail
+                  type={type}
+                  opportunityId={id}
+                  status={opp.status}
+                  applicantsCount={opp.applicants_count}
+                  expiresLabel={expiresLabel}
+                  closeState={closeState}
+                  onClose={handleCloseListing}
+                  submitError={submitError}
+                />
+              ) : (
+                <CtaRail
+                  isLoggedIn={isLoggedIn}
+                  userInterest={userInterest}
+                  opportunityType={type}
+                  opportunityId={id}
+                  submitting={submitting}
+                  submitError={submitError}
+                  justSubmitted={justSubmitted}
+                  onSubmit={handleExpressInterest}
+                  applicantsCount={opp.applicants_count}
+                  expiresLabel={expiresLabel}
+                  isClosed={isClosed}
+                />
+              )}
             </aside>
           </div>
         </div>
@@ -305,9 +327,6 @@ export default function OpportunityDetailPage() {
   );
 }
 
-// ============================================================
-// Type-specific detail panels
-// ============================================================
 function renderTypePanel(type, opp) {
   switch (type) {
     case 'commodity_request':
@@ -353,9 +372,6 @@ function renderTypePanel(type, opp) {
   }
 }
 
-// ============================================================
-// Building blocks
-// ============================================================
 function Panel({ title, children, tight }) {
   return (
     <div
@@ -420,13 +436,11 @@ function ApplicantsMetric({ count, pulsing }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {pulsing && (
-          <span
-            style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: '#7fb069',
-              animation: 'sarego-pulse-applicant 2s infinite',
-            }}
-          />
+          <span style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: '#7fb069',
+            animation: 'sarego-pulse-applicant 2s infinite',
+          }} />
         )}
         <span style={{ fontSize: 20, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
           {count} {count === 1 ? 'company' : 'companies'}
@@ -463,11 +477,11 @@ function VerifiedBadge({ tier }) {
 }
 
 // ============================================================
-// CTA rail (sticky right sidebar)
+// CTA rail — non-owner viewer (express interest flow)
 // ============================================================
 function CtaRail({
   isLoggedIn, userInterest, opportunityType, submitting, submitError,
-  justSubmitted, onSubmit, applicantsCount, expiresLabel,
+  justSubmitted, onSubmit, applicantsCount, expiresLabel, isClosed,
 }) {
   const hasInterest = !!userInterest;
 
@@ -485,7 +499,11 @@ function CtaRail({
           Engage
         </div>
 
-        {hasInterest ? (
+        {isClosed ? (
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, margin: 0 }}>
+            This listing is closed. New interest expressions are not accepted.
+          </p>
+        ) : hasInterest ? (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, color: '#7fb069' }}>
               <Check size={20} />
@@ -556,7 +574,6 @@ function CtaRail({
         )}
       </div>
 
-      {/* Status panel */}
       <div
         style={{
           background: 'rgba(255,255,255,0.025)',
@@ -586,8 +603,100 @@ function CtaRail({
 }
 
 // ============================================================
-// Shells
+// Owner rail — listing owner's controls (edit / close)
 // ============================================================
+function OwnerRail({ type, opportunityId, status, applicantsCount, expiresLabel, closeState, onClose, submitError }) {
+  const isClosed = status === 'closed';
+  const isConfirming = closeState === 'confirming';
+  const isSubmittingClose = closeState === 'submitting';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div
+        style={{
+          background: 'rgba(255,255,255,0.025)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 10,
+          padding: 26,
+        }}
+      >
+        <div style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold-400)', marginBottom: 14 }}>
+          Owner controls
+        </div>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, marginTop: 0, marginBottom: 18 }}>
+          You own this listing. Edit details or close it to new interest. Existing interest expressions are preserved.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Link
+            to={`/opportunities/${type}/${opportunityId}/edit`}
+            className="btn btn-gold"
+            style={{ width: '100%', justifyContent: 'center' }}
+          >
+            <Pencil size={15} /> Edit listing
+          </Link>
+          {!isClosed && (
+            <button
+              onClick={onClose}
+              disabled={isSubmittingClose}
+              className="btn btn-ghost-light"
+              style={{
+                width: '100%', justifyContent: 'center',
+                ...(isConfirming ? {
+                  borderColor: 'rgba(201,123,123,0.5)',
+                  color: '#e2a4a4',
+                } : {}),
+              }}
+            >
+              <Lock size={14} />
+              {isSubmittingClose ? 'Closing…' : isConfirming ? 'Confirm close?' : 'Close listing'}
+            </button>
+          )}
+          {isClosed && (
+            <div style={{ fontSize: 12, color: '#e2a4a4', padding: '8px 0', textAlign: 'center' }}>
+              This listing is closed.
+            </div>
+          )}
+        </div>
+        {submitError && (
+          <div style={{
+            marginTop: 14, padding: '10px 12px', borderRadius: 6,
+            background: 'rgba(201,123,123,0.1)',
+            border: '1px solid rgba(201,123,123,0.3)',
+            color: '#e2a4a4', fontSize: 12, lineHeight: 1.5,
+          }}>
+            {submitError}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          background: 'rgba(255,255,255,0.025)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 10,
+          padding: 22,
+          fontSize: 13,
+          color: 'rgba(255,255,255,0.7)',
+          lineHeight: 1.7,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ color: 'rgba(255,255,255,0.5)' }}>Interested companies</span>
+          <strong style={{ color: 'var(--ivory-50)' }}>{applicantsCount}</strong>
+        </div>
+        {expiresLabel && (
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: 'rgba(255,255,255,0.5)' }}>Closes</span>
+            <strong style={{ color: expiresLabel.urgent ? '#e2a45e' : 'var(--ivory-50)' }}>
+              {expiresLabel.text}
+            </strong>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LoadingShell() {
   return (
     <div style={{ background: 'var(--ink-950)', color: 'var(--ivory-50)', minHeight: '100vh' }}>
@@ -614,9 +723,6 @@ function ErrorShell({ message }) {
   );
 }
 
-// ============================================================
-// Utility functions
-// ============================================================
 function formatUSDLong(n) {
   if (!n) return '—';
   const v = Number(n);
@@ -628,8 +734,7 @@ function formatUSDLong(n) {
 
 function formatDate(d) {
   if (!d) return null;
-  const date = new Date(d);
-  return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function formatExpiresIn(iso) {
