@@ -178,7 +178,8 @@ function LoginForm() {
         body: JSON.stringify({ email, password }),
       });
       setAccessToken(data.access_token);
-      navigate('/dashboard');
+      const next = params.get('next');
+      navigate(next || '/dashboard');
     } catch (err) {
       setError(err.message || 'Sign in failed');
     } finally {
