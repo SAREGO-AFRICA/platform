@@ -386,6 +386,7 @@ const LISTING_TABLES = {
   logistics_load:    'logistics_loads',
   agri_offtake:      'agri_offtake_requests',
   tender:            'tenders',
+  trade_finance:     'trade_finance_requests',
 };
 
 // GET /api/admin/listings?type=commodity_request|...   (optional filter)
