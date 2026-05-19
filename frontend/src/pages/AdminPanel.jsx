@@ -16,6 +16,8 @@ import {
   ChevronRight,
   X,
   Loader2,
+  Layers,
+  Lock,
 } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import { api, getAccessToken, setAccessToken } from '../lib/api.js';
@@ -26,6 +28,7 @@ const TABS = [
   { id: 'kyc',      label: 'KYC Queue',    icon: ShieldCheck },
   { id: 'users',    label: 'Users',        icon: Users },
   { id: 'audit',    label: 'Audit Log',    icon: FileText },
+  { id: 'listings', label: 'Listings',     icon: Layers },
 ];
 
 export default function AdminPanel() {
@@ -176,6 +179,7 @@ export default function AdminPanel() {
           {activeTab === 'kyc'      && <KycQueueTab />}
           {activeTab === 'users'    && <UsersTab />}
           {activeTab === 'audit'    && <AuditLogTab />}
+          {activeTab === 'listings' && <ListingsTab />}
         </div>
       </section>
     </div>
@@ -1528,4 +1532,283 @@ function formatRelative(iso) {
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days}d ago`;
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+// =====================================================================
+// SAREGO-LISTINGS-TAB - Session C
+// Admin moderation across all 4 opportunity verticals.
+// Force-close any listing. One-button demo data purge.
+// =====================================================================
+
+const LISTING_VERTICALS = [
+  { type: 'commodity_request', label: 'Commodity Requests',  color: '#c97b7b' },
+  { type: 'logistics_load',    label: 'Logistics Loads',     color: '#5d8aa8' },
+  { type: 'agri_offtake',      label: 'Agri Offtake',        color: '#7fb069' },
+  { type: 'tender',            label: 'Tenders',             color: '#6ec3c9' },
+];
+
+const LISTING_STATUS_META = {
+  draft:      { label: 'Draft',      color: '#9aa3b2', bg: 'rgba(154,163,178,0.1)' },
+  published:  { label: 'Live',       color: '#7fb069', bg: 'rgba(127,176,105,0.12)' },
+  in_review:  { label: 'In review',  color: '#e2a45e', bg: 'rgba(226,164,94,0.12)' },
+  closed:     { label: 'Closed',     color: '#c97b7b', bg: 'rgba(201,123,123,0.12)' },
+  expired:    { label: 'Expired',    color: '#9aa3b2', bg: 'rgba(154,163,178,0.1)' },
+  fulfilled:  { label: 'Fulfilled',  color: 'var(--gold-400)', bg: 'rgba(220,192,104,0.12)' },
+};
+
+function ListingsTab() {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState(null);
+  const [filter, setFilter] = useState('all');
+  const [closing, setClosing] = useState({});
+  const [purgeState, setPurgeState] = useState(null); // null | 'confirming' | 'submitting' | 'done'
+  const [purgeResult, setPurgeResult] = useState(null);
+
+  async function load() {
+    setErr(null);
+    try {
+      const r = await api('/api/admin/listings');
+      setData(r.listings || {});
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function handleForceClose(type, id) {
+    const key = `${type}:${id}`;
+    if (closing[key] !== 'confirming') {
+      setClosing((p) => ({ ...p, [key]: 'confirming' }));
+      setTimeout(() => {
+        setClosing((p) => p[key] === 'confirming' ? { ...p, [key]: undefined } : p);
+      }, 4000);
+      return;
+    }
+    setClosing((p) => ({ ...p, [key]: 'submitting' }));
+    try {
+      await api(`/api/admin/listings/${type}/${id}/force-close`, { method: 'POST' });
+      setData((prev) => ({
+        ...prev,
+        [type]: (prev[type] || []).map((l) => l.id === id ? { ...l, status: 'closed' } : l),
+      }));
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setClosing((p) => ({ ...p, [key]: undefined }));
+    }
+  }
+
+  async function handlePurgeDemo() {
+    if (purgeState !== 'confirming') {
+      setPurgeState('confirming');
+      setTimeout(() => {
+        setPurgeState((cur) => cur === 'confirming' ? null : cur);
+      }, 6000);
+      return;
+    }
+    setPurgeState('submitting');
+    try {
+      const r = await api('/api/admin/listings/purge-demo', { method: 'POST' });
+      setPurgeResult(r.purged);
+      setPurgeState('done');
+      await load(); // refresh listings post-purge
+    } catch (e) {
+      setErr(e.message);
+      setPurgeState(null);
+    }
+  }
+
+  const filteredTypes = filter === 'all'
+    ? LISTING_VERTICALS.map((v) => v.type)
+    : [filter];
+
+  const totalCount = data
+    ? LISTING_VERTICALS.reduce((sum, v) => sum + (data[v.type]?.length || 0), 0)
+    : null;
+
+  return (
+    <div>
+      {/* Header with purge button */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
+        <div>
+          <h2 style={{ fontSize: 22, fontWeight: 500, color: 'var(--ivory-50)', margin: 0 }}>
+            Listings moderation
+          </h2>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', marginTop: 6 }}>
+            {totalCount !== null ? `${totalCount} total listings across 4 verticals.` : 'Loading…'}
+            {' '}Force-close any listing. Purge all seeded demo data when launching.
+          </p>
+        </div>
+        <button
+          onClick={handlePurgeDemo}
+          disabled={purgeState === 'submitting' || purgeState === 'done'}
+          className="btn"
+          style={{
+            background: purgeState === 'confirming' ? 'rgba(201,123,123,0.15)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${purgeState === 'confirming' ? 'rgba(201,123,123,0.5)' : 'rgba(255,255,255,0.12)'}`,
+            color: purgeState === 'confirming' ? '#e2a4a4' : 'var(--ivory-50)',
+            fontSize: 12,
+            padding: '8px 16px',
+          }}
+        >
+          {purgeState === 'submitting' && <><Loader2 size={13} className="spin" /> Purging…</>}
+          {purgeState === 'done' && <><CheckCircle2 size={13} /> Demo data purged</>}
+          {purgeState === 'confirming' && <>Confirm purge demo data?</>}
+          {!purgeState && <><AlertCircle size={13} /> Purge demo data</>}
+        </button>
+      </div>
+
+      {/* Purge result toast */}
+      {purgeResult && (
+        <div style={{
+          marginBottom: 20, padding: 14, borderRadius: 6,
+          background: 'rgba(127,176,105,0.1)',
+          border: '1px solid rgba(127,176,105,0.3)',
+          color: '#a8d088', fontSize: 13, lineHeight: 1.55,
+        }}>
+          <strong>Demo data purged:</strong>{' '}
+          {Object.entries(purgeResult).map(([k, v]) => `${v} ${k}`).join(' · ')}
+        </div>
+      )}
+
+      {/* Vertical filter buttons */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+        <FilterBtn label="All" active={filter === 'all'} onClick={() => setFilter('all')} />
+        {LISTING_VERTICALS.map((v) => (
+          <FilterBtn
+            key={v.type}
+            label={`${v.label} (${data?.[v.type]?.length || 0})`}
+            active={filter === v.type}
+            onClick={() => setFilter(v.type)}
+            color={v.color}
+          />
+        ))}
+      </div>
+
+      {err && (
+        <div style={{
+          marginBottom: 18, padding: 14, borderRadius: 6,
+          background: 'rgba(201,123,123,0.1)',
+          border: '1px solid rgba(201,123,123,0.3)',
+          color: '#e2a4a4', fontSize: 13,
+        }}>{err}</div>
+      )}
+
+      {data === null && !err && (
+        <div style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>
+          Loading listings…
+        </div>
+      )}
+
+      {/* Vertical sections */}
+      {data !== null && filteredTypes.map((type) => {
+        const vertical = LISTING_VERTICALS.find((v) => v.type === type);
+        const items = data[type] || [];
+        return (
+          <div key={type} style={{ marginBottom: 36 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: vertical.color }} />
+              <h3 style={{ fontSize: 15, fontWeight: 500, color: 'var(--ivory-50)', margin: 0 }}>{vertical.label}</h3>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{items.length}</span>
+            </div>
+            {items.length === 0 ? (
+              <div style={{ padding: 14, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>No listings.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {items.map((l) => (
+                  <ListingAdminRow
+                    key={l.id}
+                    listing={l}
+                    type={type}
+                    closingState={closing[`${type}:${l.id}`]}
+                    onForceClose={() => handleForceClose(type, l.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <style>{`.spin { animation: sarego-spin 1s linear infinite; } @keyframes sarego-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+function FilterBtn({ label, active, onClick, color }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '6px 12px',
+        background: active ? 'rgba(220,192,104,0.12)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${active ? 'rgba(220,192,104,0.4)' : 'rgba(255,255,255,0.08)'}`,
+        color: active ? 'var(--gold-400)' : 'rgba(255,255,255,0.7)',
+        borderRadius: 999, fontSize: 12, cursor: 'pointer',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ListingAdminRow({ listing, type, closingState, onForceClose }) {
+  const statusMeta = LISTING_STATUS_META[listing.status] || LISTING_STATUS_META.draft;
+  const isDemo = listing.metadata?.demo === true;
+  const isConfirming = closingState === 'confirming';
+  const isSubmitting = closingState === 'submitting';
+
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.025)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 6,
+      padding: '12px 14px',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 12,
+      flexWrap: 'wrap',
+    }}>
+      <div style={{ flex: 1, minWidth: 240 }}>
+        <Link
+          to={`/opportunities/${type}/${listing.id}`}
+          style={{ fontSize: 13, fontWeight: 500, color: 'var(--ivory-50)', textDecoration: 'none' }}
+        >
+          {listing.title}
+        </Link>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 4 }}>
+          <span>{listing.country_iso}</span>
+          {listing.owner_name && <span>Owner: {listing.owner_name}</span>}
+          {!listing.owner_name && <span style={{ fontStyle: 'italic' }}>SAREGO listing</span>}
+          {listing.applicants_count > 0 && <span>{listing.applicants_count} interested</span>}
+          {isDemo && <span style={{ color: '#e2a45e' }}>DEMO</span>}
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{
+          padding: '3px 9px', borderRadius: 999,
+          background: statusMeta.bg, color: statusMeta.color,
+          fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 500,
+        }}>{statusMeta.label}</span>
+        {listing.status === 'published' && (
+          <button
+            onClick={onForceClose}
+            disabled={isSubmitting}
+            style={{
+              padding: '5px 10px',
+              background: isConfirming ? 'rgba(201,123,123,0.15)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${isConfirming ? 'rgba(201,123,123,0.5)' : 'rgba(255,255,255,0.1)'}`,
+              color: isConfirming ? '#e2a4a4' : 'rgba(255,255,255,0.7)',
+              borderRadius: 4, fontSize: 11, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}
+          >
+            <Lock size={11} />
+            {isSubmitting ? 'Closing…' : isConfirming ? 'Confirm?' : 'Force-close'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
