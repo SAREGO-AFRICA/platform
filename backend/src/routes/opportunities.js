@@ -25,13 +25,15 @@ const TYPE_TO_TABLE = {
   logistics_load:    'logistics_loads',
   agri_offtake:      'agri_offtake_requests',
   tender:            'tenders',
+  trade_finance:     'trade_finance_requests',
 };
 
 const TYPE_EXTRAS = {
-  commodity_requests:    'commodity, quantity, quantity_unit, incoterms',
-  logistics_loads:       'origin_country_iso, origin_city, destination_country_iso, destination_city, cargo_type, weight_tons, load_date',
-  agri_offtake_requests: 'crop, quantity_tons, delivery_window_start, delivery_window_end',
-  tenders:               'tender_reference, issuing_authority, tender_type, submission_deadline',
+  commodity_requests:     'commodity, quantity, quantity_unit, incoterms, sector',
+  logistics_loads:        'origin_country_iso, origin_city, destination_country_iso, destination_city, cargo_type, weight_tons, load_date, sector',
+  agri_offtake_requests:  'crop, quantity_tons, delivery_window_start, delivery_window_end, sector',
+  tenders:                'tender_reference, issuing_authority, tender_type, submission_deadline, sector',
+  trade_finance_requests: 'finance_type, sector, destination_country_iso, trade_context, contract_reference, finance_timeline, collateral_type',
 };
 
 function tableForType(type) {
@@ -66,6 +68,7 @@ const COMMON_FIELDS = {
   country_iso: z.string().trim().regex(/^[A-Z]{2}$/, 'Country must be a 2-letter ISO code'),
   value_usd:   z.union([z.number().nonnegative(), z.null()]).optional(),
   expires_at:  z.string().datetime({ offset: true }).or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
+  sector:      z.enum(['mining', 'agriculture', 'manufacturing', 'logistics', 'infrastructure', 'energy', 'commodities', 'cross_sector', 'other'], { errorMap: () => ({ message: 'Pick a sector' }) }),
 };
 
 const CREATE_SCHEMAS = {
@@ -103,6 +106,16 @@ const CREATE_SCHEMAS = {
     weight_tons:             z.union([z.number().positive(), z.null()]).optional(),
     load_date:               z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   }),
+
+  trade_finance: z.object({
+    ...COMMON_FIELDS,
+    finance_type:            z.enum(['pre_export', 'working_capital', 'invoice_finance', 'purchase_order', 'lc_facilitation'], { errorMap: () => ({ message: 'Pick a finance type' }) }),
+    destination_country_iso: z.string().trim().regex(/^[A-Z]{2}$/).optional().nullable(),
+    trade_context:           z.enum(['purchase_order', 'export_contract', 'invoice', 'tender_award', 'supply_agreement', 'other'], { errorMap: () => ({ message: 'Pick a trade context' }) }),
+    contract_reference:      z.string().trim().max(160).optional().nullable(),
+    finance_timeline:        z.enum(['immediate', 'short_term', 'medium_term', 'rolling_facility'], { errorMap: () => ({ message: 'Pick a timeline' }) }),
+    collateral_type:         z.enum(['invoice_backed', 'commodity_backed', 'po_backed', 'unsecured', 'equipment_backed'], { errorMap: () => ({ message: 'Pick a collateral type' }) }),
+  }),
 };
 
 const UPDATE_SCHEMAS = {
@@ -110,27 +123,33 @@ const UPDATE_SCHEMAS = {
   agri_offtake:      CREATE_SCHEMAS.agri_offtake.partial(),
   tender:            CREATE_SCHEMAS.tender.partial(),
   logistics_load:    CREATE_SCHEMAS.logistics_load.partial(),
+  trade_finance:     CREATE_SCHEMAS.trade_finance.partial(),
 };
 
 // Whitelist of insertable/updatable columns per vertical (prevents
 // mass-assignment of system fields like applicants_count, owner_user_id)
 const TYPE_COLUMN_MAP = {
   commodity_request: [
-    'title', 'summary', 'country_iso', 'value_usd', 'expires_at',
+    'title', 'summary', 'country_iso', 'value_usd', 'expires_at', 'sector',
     'commodity', 'quantity', 'quantity_unit', 'incoterms',
   ],
   agri_offtake: [
-    'title', 'summary', 'country_iso', 'value_usd', 'expires_at',
+    'title', 'summary', 'country_iso', 'value_usd', 'expires_at', 'sector',
     'crop', 'quantity_tons', 'delivery_window_start', 'delivery_window_end',
   ],
   tender: [
-    'title', 'summary', 'country_iso', 'value_usd', 'expires_at',
+    'title', 'summary', 'country_iso', 'value_usd', 'expires_at', 'sector',
     'tender_reference', 'issuing_authority', 'tender_type', 'submission_deadline',
   ],
   logistics_load: [
-    'title', 'summary', 'country_iso', 'value_usd', 'expires_at',
+    'title', 'summary', 'country_iso', 'value_usd', 'expires_at', 'sector',
     'origin_country_iso', 'origin_city', 'destination_country_iso', 'destination_city',
     'cargo_type', 'weight_tons', 'load_date',
+  ],
+  trade_finance: [
+    'title', 'summary', 'country_iso', 'value_usd', 'expires_at', 'sector',
+    'finance_type', 'destination_country_iso', 'trade_context', 'contract_reference',
+    'finance_timeline', 'collateral_type',
   ],
 };
 
@@ -157,7 +176,7 @@ router.get(
                          ELSE 4 END`;
     const futureClause = `(expires_at IS NULL OR expires_at > now())`;
 
-    const [commodityRes, logisticsRes, agriRes, tendersRes, projectsRes] = await Promise.all([
+    const [commodityRes, logisticsRes, agriRes, tendersRes, tradeFinanceRes, projectsRes] = await Promise.all([
       query(`
         SELECT id, title, summary, country_iso, value_usd, status,
                verified_level, expires_at, applicants_count,
@@ -203,6 +222,17 @@ router.get(
          LIMIT 1
       `),
       query(`
+        SELECT id, title, summary, country_iso, value_usd, status,
+               verified_level, expires_at, applicants_count,
+               owner_user_id, owner_org_id, source_type, metadata,
+               ${TYPE_EXTRAS.trade_finance_requests},
+               published_at
+          FROM trade_finance_requests
+         WHERE status = 'published' AND ${futureClause}
+         ORDER BY ${tierOrder}, published_at DESC
+         LIMIT 1
+      `),
+      query(`
         SELECT p.id, p.title, p.summary, c.iso_code AS country_iso,
                p.capital_required_usd AS value_usd, p.status,
                'institutional'::text AS verified_level, NULL::timestamptz AS expires_at,
@@ -223,6 +253,7 @@ router.get(
       logistics_load:    normaliseRow(logisticsRes.rows[0]),
       agri_offtake:      normaliseRow(agriRes.rows[0]),
       tender:            normaliseRow(tendersRes.rows[0]),
+      trade_finance:     normaliseRow(tradeFinanceRes.rows[0]),
       investment_project: normaliseRow(projectsRes.rows[0]),
     };
 

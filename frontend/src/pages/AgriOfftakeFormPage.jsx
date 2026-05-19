@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// SAREGO-SECTOR-PATCH
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { z } from 'zod';
 import { ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
@@ -25,6 +26,7 @@ const schema = z.object({
   country_iso:           z.string().trim().regex(/^[A-Z]{2}$/, 'Select a country'),
   value_usd:             z.union([z.number().nonnegative(), z.nan().transform(() => null)]).optional().nullable(),
   expires_at:            z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a closing date').optional(),
+  sector:       z.enum(['mining', 'agriculture', 'manufacturing', 'logistics', 'infrastructure', 'energy', 'commodities', 'cross_sector', 'other'], { errorMap: () => ({ message: 'Pick a sector' }) }),
 }).refine(
   (d) => !d.delivery_window_start || !d.delivery_window_end || d.delivery_window_start <= d.delivery_window_end,
   { message: 'Delivery start must be on or before the end date', path: ['delivery_window_end'] }
@@ -40,6 +42,7 @@ export default function AgriOfftakeFormPage() {
     title: '', summary: '', crop: '', quantity_tons: '',
     delivery_window_start: '', delivery_window_end: '',
     country_iso: '', value_usd: '', expires_at: defaultExpiry(),
+    sector: 'agriculture',
   });
   const [countries, setCountries] = useState(null);
   const [loadingExisting, setLoadingExisting] = useState(isEdit);
@@ -79,6 +82,7 @@ export default function AgriOfftakeFormPage() {
             country_iso: opp.country_iso || '',
             value_usd: opp.value_usd != null ? String(opp.value_usd) : '',
             expires_at: opp.expires_at ? opp.expires_at.slice(0, 10) : defaultExpiry(),
+            sector: opp.sector || 'agriculture',
           });
           setLoadingExisting(false);
         }
@@ -122,6 +126,7 @@ export default function AgriOfftakeFormPage() {
       country_iso: form.country_iso,
       value_usd: form.value_usd === '' ? null : Number(form.value_usd),
       expires_at: form.expires_at || undefined,
+      sector: form.sector,
     };
   }
 
@@ -253,6 +258,21 @@ export default function AgriOfftakeFormPage() {
 
             <Field label="Closing date" required error={errors.expires_at} hint="When this listing closes to new producer interest.">
               <input type="date" value={form.expires_at} onChange={(e) => setField('expires_at', e.target.value)} min={new Date().toISOString().slice(0, 10)} style={inputStyle(!!errors.expires_at)} />
+            </Field>
+
+            <Field label="Sector" required error={errors.sector} hint="The primary economic sector for this listing.">
+              <select value={form.sector} onChange={(e) => setField('sector', e.target.value)} style={inputStyle(!!errors.sector)}>
+              <option value="">Select a sector</option>
+              <option value="mining">Mining</option>
+              <option value="agriculture">Agriculture</option>
+              <option value="manufacturing">Manufacturing</option>
+              <option value="logistics">Logistics</option>
+              <option value="infrastructure">Infrastructure</option>
+              <option value="energy">Energy</option>
+              <option value="commodities">Commodities</option>
+              <option value="cross_sector">Cross-sector</option>
+              <option value="other">Other</option>
+              </select>
             </Field>
 
             {serverError && (

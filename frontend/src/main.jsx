@@ -17,6 +17,7 @@ import CommodityRequestFormPage from './pages/CommodityRequestFormPage.jsx';
 import AgriOfftakeFormPage from './pages/AgriOfftakeFormPage.jsx';
 import TenderFormPage from './pages/TenderFormPage.jsx';
 import LogisticsLoadFormPage from './pages/LogisticsLoadFormPage.jsx';
+import TradeFinanceFormPage from './pages/TradeFinanceFormPage.jsx';
 import MyListingsPage from './pages/MyListingsPage.jsx';
 import KycPage from './pages/KycPage.jsx';
 import DealRoomsListPage from './pages/DealRoomsListPage.jsx';
@@ -47,6 +48,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/opportunities/tender/:id/edit" element={<TenderFormPage />} />
         <Route path="/opportunities/logistics_load/new" element={<LogisticsLoadFormPage />} />
         <Route path="/opportunities/logistics_load/:id/edit" element={<LogisticsLoadFormPage />} />
+        <Route path="/opportunities/trade_finance/new" element={<TradeFinanceFormPage />} />
+        <Route path="/opportunities/trade_finance/:id/edit" element={<TradeFinanceFormPage />} />
         <Route path="/opportunities/:type/:id" element={<OpportunityDetailPage />} />
 
         {/* Project routes — defined BEFORE /:slug so they take priority */}

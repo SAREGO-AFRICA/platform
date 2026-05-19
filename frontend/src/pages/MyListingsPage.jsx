@@ -1,6 +1,7 @@
+// SAREGO-TRADE-FINANCE-INTEGRATION
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Lock, Users, MapPin, Clock, AlertCircle, Package, Truck, Sprout, Briefcase } from 'lucide-react';
+import { Plus, Pencil, Lock, Users, MapPin, Clock, AlertCircle, Package, Truck, Sprout, Briefcase, Banknote } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
 import { api, getAccessToken } from '../lib/api.js';
@@ -31,6 +32,10 @@ const VERTICALS = [
     ctaLabel: 'Publish a tender',
     emptyTitle: 'No tenders yet',
     emptyBody:  'Publish a government or institutional tender to verified counterparties.' },
+  { type: 'trade_finance',     label: 'Trade Finance',           icon: Banknote, color: '#a087d9',
+    ctaLabel: 'Request trade finance',
+    emptyTitle: 'No trade finance requests yet',
+    emptyBody:  'Surface a trade finance need to institutional capital providers across SADC.' },
 ];
 
 export default function MyListingsPage() {
@@ -260,6 +265,9 @@ function ListingRow({ listing, type, closingState, onClose }) {
     extraLine = listing.issuing_authority;
   } else if (type === 'commodity_request' && listing.commodity) {
     extraLine = listing.commodity;
+  } else if (type === 'trade_finance' && listing.finance_type) {
+    const ft = listing.finance_type.split('_').map((w) => w === 'lc' ? 'LC' : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    extraLine = ft + (listing.value_usd ? ` · ${formatUSDShort(listing.value_usd)}` : '');
   }
 
   return (

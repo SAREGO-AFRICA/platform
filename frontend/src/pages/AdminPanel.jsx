@@ -1,3 +1,4 @@
+// SAREGO-TRADE-FINANCE-INTEGRATION
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -1545,6 +1546,7 @@ const LISTING_VERTICALS = [
   { type: 'logistics_load',    label: 'Logistics Loads',     color: '#5d8aa8' },
   { type: 'agri_offtake',      label: 'Agri Offtake',        color: '#7fb069' },
   { type: 'tender',            label: 'Tenders',             color: '#6ec3c9' },
+  { type: 'trade_finance',     label: 'Trade Finance',       color: '#a087d9' },
 ];
 
 const LISTING_STATUS_META = {

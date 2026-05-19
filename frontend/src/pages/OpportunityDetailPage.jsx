@@ -1,9 +1,10 @@
+// SAREGO-TRADE-FINANCE-INTEGRATION
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Calendar, Users, Shield, Clock, FileText,
-  Building2, Truck, Package, Sprout, Briefcase, AlertCircle, Check, Pencil, Lock,
+  Building2, Truck, Package, Sprout, Briefcase, Banknote, AlertCircle, Check, Pencil, Lock,
 } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
@@ -33,6 +34,12 @@ const TYPE_META = {
     icon: Briefcase,
     color: '#6ec3c9',
     crumb: { trade: 'For Governments', section: 'Tenders', sectionPath: '/governments' },
+  },
+  trade_finance: {
+    label: 'Trade Finance',
+    icon: Banknote,
+    color: '#a087d9',
+    crumb: { trade: 'Trade Hub', section: 'Trade Finance', sectionPath: '/trade-hub' },
   },
 };
 
@@ -365,6 +372,19 @@ function renderTypePanel(type, opp) {
           ['Tender Type',       opp.tender_type],
           ['Submission Deadline', formatDate(opp.submission_deadline)],
           ['Country',           opp.country_iso],
+        ]} />
+      );
+    case 'trade_finance':
+      return (
+        <DefinitionList items={[
+          ['Finance Type',     formatEnumDetail(opp.finance_type)],
+          ['Sector',           formatEnumDetail(opp.sector)],
+          ['Trade Context',    formatEnumDetail(opp.trade_context)],
+          ['Contract Ref',     opp.contract_reference],
+          ['Timeline',         formatEnumDetail(opp.finance_timeline)],
+          ['Collateral',       formatEnumDetail(opp.collateral_type)],
+          ['Origin',           opp.country_iso],
+          ['Destination',      opp.destination_country_iso],
         ]} />
       );
     default:
@@ -721,6 +741,14 @@ function ErrorShell({ message }) {
       <Footer />
     </div>
   );
+}
+
+function formatEnumDetail(value) {
+  if (!value) return null;
+  return value
+    .split('_')
+    .map((w) => w.toLowerCase() === 'lc' ? 'LC' : w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 function formatUSDLong(n) {

@@ -1,7 +1,8 @@
+// SAREGO-TRADE-FINANCE-INTEGRATION
 import React from 'react';
 import {
   MapPin, Users, Shield, Clock,
-  Package, Truck, Sprout, Briefcase,
+  Package, Truck, Sprout, Briefcase, Banknote,
 } from 'lucide-react';
 
 /**
@@ -40,6 +41,11 @@ const TYPE_META = {
     label: 'Government Tender',
     icon: Briefcase,
     color: '#6ec3c9',
+  },
+  trade_finance: {
+    label: 'Trade Finance',
+    icon: Banknote,
+    color: '#a087d9',
   },
 };
 
@@ -249,6 +255,19 @@ function renderTypePanel(type, data) {
           ['Country',             data.country_iso],
         ]} />
       );
+    case 'trade_finance':
+      return (
+        <DefList items={[
+          ['Finance Type',     formatEnum(data.finance_type)],
+          ['Sector',           formatEnum(data.sector)],
+          ['Trade Context',    formatEnum(data.trade_context)],
+          ['Contract Ref',     data.contract_reference],
+          ['Timeline',         formatEnum(data.finance_timeline)],
+          ['Collateral',       formatEnum(data.collateral_type)],
+          ['Origin',           data.country_iso],
+          ['Destination',      data.destination_country_iso],
+        ]} />
+      );
     default:
       return null;
   }
@@ -293,6 +312,15 @@ function Metric({ label, value, accent, icon, urgent, muted }) {
 // ============================================================
 // Utilities
 // ============================================================
+
+function formatEnum(value) {
+  if (!value) return null;
+  // Convert "pre_export" → "Pre-export", "lc_facilitation" → "LC Facilitation"
+  return value
+    .split('_')
+    .map((w) => w.toLowerCase() === 'lc' ? 'LC' : w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
 
 function formatUSD(n) {
   if (!n) return '—';
