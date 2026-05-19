@@ -301,4 +301,21 @@ p  { margin: 0 0 1em; max-width: 68ch; }
 select option {
   background: #1a1a1a;
   color: #faf6ee;
+}/* Dark-theme date input calendar icon - native icon is nearly invisible on dark
+   backgrounds. Filter inverts and brightens it so it's readable. Chromium-only;
+   Firefox doesn't expose the indicator pseudo-element. */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.9) brightness(1.2);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 150ms;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
 }
