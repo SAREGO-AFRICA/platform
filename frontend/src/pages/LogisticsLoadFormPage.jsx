@@ -5,6 +5,8 @@ import { ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
 import { api, getAccessToken } from '../lib/api.js';
+import ListingPreview from '../components/ListingPreview.jsx';
+// SAREGO-PREVIEW-PATCH
 
 /**
  * LogisticsLoadFormPage — unified create + edit form for logistics loads.
@@ -44,6 +46,8 @@ export default function LogisticsLoadFormPage() {
   const [countries, setCountries] = useState(null);
   const [loadingExisting, setLoadingExisting] = useState(isEdit);
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState(null);
 
@@ -109,12 +113,8 @@ export default function LogisticsLoadFormPage() {
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setServerError(null);
-
-    // `country_iso` (the "primary country" indexing field) defaults to origin
-    const payload = {
+  function buildPayload() {
+    return {
       title: form.title.trim(),
       summary: form.summary.trim(),
       origin_country_iso: form.origin_country_iso,
@@ -128,6 +128,38 @@ export default function LogisticsLoadFormPage() {
       value_usd: form.value_usd === '' ? null : Number(form.value_usd),
       expires_at: form.expires_at || undefined,
     };
+  }
+
+  function handlePreview() {
+    if (showPreview) {
+      setShowPreview(false);
+      return;
+    }
+    const payload = buildPayload();
+    const parsed = schema.safeParse(payload);
+    if (!parsed.success) {
+      const fieldErrors = {};
+      parsed.error.issues.forEach((issue) => {
+        const field = issue.path[0];
+        if (field && !fieldErrors[field]) fieldErrors[field] = issue.message;
+      });
+      setErrors(fieldErrors);
+      return;
+    }
+    setErrors({});
+    setPreviewData(parsed.data);
+    setShowPreview(true);
+    setTimeout(() => {
+      document.getElementById('sarego-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setServerError(null);
+
+    // `country_iso` (the "primary country" indexing field) defaults to origin
+    const payload = buildPayload();
 
     const parsed = schema.safeParse(payload);
     if (!parsed.success) {
@@ -261,9 +293,19 @@ export default function LogisticsLoadFormPage() {
               <button type="submit" disabled={submitting} className="btn btn-gold">
                 {submitting ? <><Loader2 size={16} className="spin" /> Saving…</> : (isEdit ? 'Save changes' : 'Publish listing')}
               </button>
+              <button type="button" onClick={handlePreview} className="btn btn-ghost-light">{showPreview ? 'Hide preview' : 'Preview'}</button>
               <Link to="/my-listings" className="btn btn-ghost-light">Cancel</Link>
             </div>
           </form>
+
+          {showPreview && previewData && (
+            <div id="sarego-preview" style={{ marginTop: 36 }}>
+              <div style={{ fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--gold-400)', marginBottom: 12 }}>
+                Preview
+              </div>
+              <ListingPreview type="logistics_load" data={previewData} />
+            </div>
+          )}
           <style>{`.spin { animation: sarego-spin 1s linear infinite; } @keyframes sarego-spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </section>
