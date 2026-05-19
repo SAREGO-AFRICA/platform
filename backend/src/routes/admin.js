@@ -373,4 +373,105 @@ router.get(
   })
 );
 
+
+// =====================================================================
+// SAREGO-LISTINGS-MODERATION - Session C
+// Admin-only moderation across all 4 opportunity verticals.
+// Router is wrapped with requireAuth + requireRole('admin') at top of file,
+// so individual routes don't repeat the decorator.
+// =====================================================================
+
+const LISTING_TABLES = {
+  commodity_request: 'commodity_requests',
+  logistics_load:    'logistics_loads',
+  agri_offtake:      'agri_offtake_requests',
+  tender:            'tenders',
+};
+
+// GET /api/admin/listings?type=commodity_request|...   (optional filter)
+router.get(
+  '/listings',
+  asyncHandler(async (req, res) => {
+    const typeFilter = req.query.type?.toString();
+    const types = typeFilter && LISTING_TABLES[typeFilter]
+      ? [typeFilter]
+      : Object.keys(LISTING_TABLES);
+
+    const results = {};
+    await Promise.all(types.map(async (type) => {
+      const table = LISTING_TABLES[type];
+      const r = await query(
+        `SELECT t.id, t.title, t.country_iso, t.value_usd, t.status, t.verified_level,
+                t.applicants_count, t.owner_user_id, t.owner_org_id, t.source_type,
+                t.metadata, t.published_at, t.created_at, t.updated_at,
+                u.full_name AS owner_name,
+                u.email     AS owner_email
+           FROM ${table} t
+           LEFT JOIN users u ON u.id = t.owner_user_id
+          ORDER BY t.created_at DESC
+          LIMIT 200`
+      );
+      results[type] = r.rows.map((row) => ({
+        ...row,
+        value_usd: row.value_usd != null ? Number(row.value_usd) : null,
+      }));
+    }));
+
+    res.json({ listings: results });
+  })
+);
+
+// POST /api/admin/listings/:type/:id/force-close
+router.post(
+  '/listings/:type/:id/force-close',
+  asyncHandler(async (req, res) => {
+    const type = req.params.type;
+    const table = LISTING_TABLES[type];
+    if (!table) {
+      throw new HttpError(404, `Unknown opportunity type '${type}'.`);
+    }
+
+    const exists = await query(
+      `SELECT id FROM ${table} WHERE id = $1`,
+      [req.params.id]
+    );
+    if (!exists.rows[0]) throw new HttpError(404, 'Listing not found');
+
+    const r = await query(
+      `UPDATE ${table}
+          SET status = 'closed', updated_at = now()
+        WHERE id = $1
+        RETURNING *`,
+      [req.params.id]
+    );
+    res.json({
+      listing: {
+        ...r.rows[0],
+        value_usd: r.rows[0].value_usd != null ? Number(r.rows[0].value_usd) : null,
+      },
+    });
+  })
+);
+
+// POST /api/admin/listings/purge-demo
+//   Deletes ALL rows with metadata.demo = true across the 4 vertical tables
+//   AND trade_corridors (source_type = 'seed'). Irreversible.
+router.post(
+  '/listings/purge-demo',
+  asyncHandler(async (_req, res) => {
+    const purged = {};
+    for (const [type, table] of Object.entries(LISTING_TABLES)) {
+      const r = await query(
+        `DELETE FROM ${table} WHERE metadata->>'demo' = 'true' RETURNING id`
+      );
+      purged[type] = r.rowCount;
+    }
+    const corridors = await query(
+      `DELETE FROM trade_corridors WHERE source_type = 'seed' RETURNING id`
+    );
+    purged.trade_corridors = corridors.rowCount;
+
+    res.json({ purged });
+  })
+);
 export default router;
