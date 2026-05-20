@@ -48,11 +48,19 @@ async function computeStats() {
     `),
     // Sectors represented = distinct sector slugs linked from published projects
     query(`
-      SELECT count(DISTINCT s.slug)::int AS c
-        FROM project_sectors ps
-        JOIN sectors s ON s.id = ps.sector_id
-        JOIN projects p ON p.id = ps.project_id
-       WHERE p.status = 'published'
+      -- Sectors represented = distinct sectors across all 5 opportunity verticals
+      -- plus legacy project_sectors mappings.
+      SELECT count(DISTINCT s)::int AS c FROM (
+        SELECT sector::text AS s FROM commodity_requests WHERE status = 'published' AND sector IS NOT NULL
+        UNION SELECT sector::text FROM logistics_loads WHERE status = 'published' AND sector IS NOT NULL
+        UNION SELECT sector::text FROM agri_offtake_requests WHERE status = 'published' AND sector IS NOT NULL
+        UNION SELECT sector::text FROM tenders WHERE status = 'published' AND sector IS NOT NULL
+        UNION SELECT sector::text FROM trade_finance_requests WHERE status = 'published' AND sector IS NOT NULL
+        UNION SELECT s.slug FROM project_sectors ps
+          JOIN sectors s ON s.id = ps.sector_id
+          JOIN projects p ON p.id = ps.project_id
+         WHERE p.status = 'published'
+      ) u
     `),
     // Verified counterparties = users with trust_tier >= verified
     query(`SELECT count(*)::int AS c FROM users WHERE trust_tier IN ('verified', 'institutional') AND is_active = true`),
