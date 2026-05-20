@@ -1,3 +1,4 @@
+// SAREGO-TF-PHASE2
 // src/routes/activity.js
 // Unified event stream for the live activity feed.
 // Aggregates recent events across projects, the 5 opportunity verticals,
@@ -33,6 +34,7 @@ router.get(
       logisticsRes,
       agriRes,
       tendersRes,
+      tradeFinanceRes,
       interestsRes,
       dealRoomsRes,
     ] = await Promise.all([
@@ -95,6 +97,18 @@ router.get(
                 published_at AS ts, 'tender_posted' AS event_type,
                 COALESCE(issuing_authority, 'Government tender') AS owner_label
            FROM tenders
+          WHERE status = 'published'
+            ${country ? "AND country_iso = $1" : ''}
+          ORDER BY published_at DESC
+          LIMIT ${perSourceLimit}`,
+        country ? [country] : []
+      ),
+      query(
+        `SELECT id, title, country_iso, value_usd, applicants_count, verified_level,
+                finance_type, sector,
+                published_at AS ts, 'trade_finance_posted' AS event_type,
+                'Verified institution' AS owner_label
+           FROM trade_finance_requests
           WHERE status = 'published'
             ${country ? "AND country_iso = $1" : ''}
           ORDER BY published_at DESC
@@ -195,6 +209,21 @@ router.get(
           tender_reference: r.tender_reference,
           issuing_authority: r.issuing_authority,
           tender_type: r.tender_type,
+        },
+        timestamp: r.ts,
+      })),
+      ...tradeFinanceRes.rows.map((r) => ({
+        id: `tf-${r.id}`,
+        type: r.event_type,
+        title: r.title,
+        country_iso: r.country_iso,
+        value_usd: r.value_usd ? Number(r.value_usd) : null,
+        applicants_count: r.applicants_count,
+        verified_level: r.verified_level,
+        owner_label: r.owner_label,
+        metadata: {
+          finance_type: r.finance_type,
+          sector: r.sector,
         },
         timestamp: r.ts,
       })),

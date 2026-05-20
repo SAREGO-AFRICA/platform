@@ -1,6 +1,7 @@
+// SAREGO-TF-PHASE2
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Truck, Sprout, Briefcase, TrendingUp, ArrowUpRight, MapPin, Users, Clock, Shield } from 'lucide-react';
+import { Package, Truck, Sprout, Briefcase, TrendingUp, ArrowUpRight, MapPin, Users, Clock, Shield, Banknote } from 'lucide-react';
 import { api } from '../lib/api.js';
 
 /**
@@ -19,6 +20,7 @@ const VERTICAL_META = {
   logistics_load:     { label: 'Logistics',   icon: Truck,      color: '#5d8aa8', section: 'Trade Hub' },
   agri_offtake:       { label: 'Agri Offtake', icon: Sprout,    color: '#7fb069', section: 'Trade Hub' },
   tender:             { label: 'Tender',      icon: Briefcase,  color: '#6ec3c9', section: 'For Governments' },
+  trade_finance:      { label: 'Trade Finance', icon: Banknote, color: '#a087d9', section: 'Trade Hub' },
   investment_project: { label: 'Project',     icon: TrendingUp, color: '#dcc068', section: 'For Investors' },
 };
 
@@ -46,7 +48,7 @@ export default function FeaturedOpportunitiesGrid() {
 
   // Order matters for visual hierarchy: tender (institutional) first, then projects,
   // then the three commercial verticals.
-  const order = ['tender', 'investment_project', 'commodity_request', 'logistics_load', 'agri_offtake'];
+  const order = ['tender', 'trade_finance', 'investment_project', 'commodity_request', 'logistics_load', 'agri_offtake'];
 
   return (
     <div>
@@ -225,6 +227,12 @@ function FeaturedCard({ vertical, item }) {
   );
 }
 
+
+function formatEnumWord(v) {
+  if (!v) return null;
+  return v.split('_').map((w) => w.toLowerCase() === 'lc' ? 'LC' : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
 function renderContextLine(vertical, item) {
   switch (vertical) {
     case 'commodity_request':
@@ -243,6 +251,8 @@ function renderContextLine(vertical, item) {
       ].filter(Boolean).join(' · ');
     case 'tender':
       return [item.issuing_authority, item.tender_type].filter(Boolean).join(' · ');
+    case 'trade_finance':
+      return [formatEnumWord(item.finance_type), formatEnumWord(item.sector)].filter(Boolean).join(' · ');
     case 'investment_project':
       return item.summary?.slice(0, 120) + (item.summary?.length > 120 ? '…' : '');
     default:

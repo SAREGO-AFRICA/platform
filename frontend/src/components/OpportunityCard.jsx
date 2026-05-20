@@ -1,3 +1,4 @@
+// SAREGO-TF-PHASE2
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Users, Clock, Shield, MapPin } from 'lucide-react';
@@ -13,6 +14,7 @@ const TYPE_META = {
   commodity_request_posted: { label: 'Commodity',         color: '#c97b7b', verticalType: 'commodity_request' },
   logistics_load_posted:    { label: 'Logistics',         color: '#5d8aa8', verticalType: 'logistics_load' },
   agri_offtake_posted:      { label: 'Agri Offtake',      color: '#7fb069', verticalType: 'agri_offtake' },
+  trade_finance_posted:     { label: 'Trade Finance',    color: '#a087d9', verticalType: 'trade_finance' },
   interest_expressed:       { label: 'Investor Interest', color: '#a888c2', verticalType: null },
   deal_room_opened:         { label: 'Deal Room',         color: '#e2a45e', verticalType: null },
 };

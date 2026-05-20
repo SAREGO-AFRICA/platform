@@ -1,3 +1,4 @@
+// SAREGO-TF-PHASE2
 // src/routes/stats.js
 // Public aggregate counts for the live activity perception layer.
 // Cached in-memory 60s — no Redis dependency for v1.
@@ -21,6 +22,7 @@ async function computeStats() {
     logisticsRes,
     agriRes,
     tendersRes,
+    tradeFinanceRes,
     countriesRes,
     sectorsRes,
     verifiedUsersRes,
@@ -32,6 +34,7 @@ async function computeStats() {
     query(`SELECT count(*)::int AS c FROM logistics_loads WHERE status = 'published'`),
     query(`SELECT count(*)::int AS c FROM agri_offtake_requests WHERE status = 'published'`),
     query(`SELECT count(*)::int AS c FROM tenders WHERE status = 'published'`),
+    query(`SELECT count(*)::int AS c FROM trade_finance_requests WHERE status = 'published'`),
     // Active countries = distinct country_iso across all opportunity tables + projects
     query(`
       SELECT count(DISTINCT iso)::int AS c FROM (
@@ -40,6 +43,7 @@ async function computeStats() {
         UNION SELECT country_iso FROM logistics_loads WHERE status = 'published'
         UNION SELECT country_iso FROM agri_offtake_requests WHERE status = 'published'
         UNION SELECT country_iso FROM tenders WHERE status = 'published'
+        UNION SELECT country_iso FROM trade_finance_requests WHERE status = 'published'
       ) u
     `),
     // Sectors represented = distinct sector slugs linked from published projects
@@ -64,6 +68,8 @@ async function computeStats() {
         SELECT COALESCE(value_usd, 0) FROM agri_offtake_requests WHERE status = 'published'
         UNION ALL
         SELECT COALESCE(value_usd, 0) FROM tenders WHERE status = 'published'
+        UNION ALL
+        SELECT COALESCE(value_usd, 0) FROM trade_finance_requests WHERE status = 'published'
       ) u
     `),
     // Recent activity in last 24h across all activity-generating tables
@@ -74,6 +80,7 @@ async function computeStats() {
       + (SELECT count(*) FROM logistics_loads WHERE published_at > now() - interval '24 hours')
       + (SELECT count(*) FROM agri_offtake_requests WHERE published_at > now() - interval '24 hours')
       + (SELECT count(*) FROM tenders WHERE published_at > now() - interval '24 hours')
+      + (SELECT count(*) FROM trade_finance_requests WHERE published_at > now() - interval '24 hours')
       + (SELECT count(*) FROM investment_interests WHERE created_at > now() - interval '24 hours')
       )::int AS c
     `),
@@ -83,7 +90,8 @@ async function computeStats() {
     commodityRes.rows[0].c +
     logisticsRes.rows[0].c +
     agriRes.rows[0].c +
-    tendersRes.rows[0].c;
+    tendersRes.rows[0].c +
+    tradeFinanceRes.rows[0].c;
 
   return {
     activeOpportunities,
@@ -99,6 +107,7 @@ async function computeStats() {
       logisticsLoads: logisticsRes.rows[0].c,
       agriOfftake: agriRes.rows[0].c,
       tenders: tendersRes.rows[0].c,
+      tradeFinance: tradeFinanceRes.rows[0].c,
     },
     cachedAt: new Date().toISOString(),
   };
