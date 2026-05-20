@@ -69,7 +69,7 @@ export default function FeaturedOpportunitiesGrid() {
             textDecoration: 'none',
           }}
         >
-          View all opportunities <ArrowUpRight size={14} />
+          View Live Trade Activity <ArrowUpRight size={14} />
         </Link>
       </div>
 
