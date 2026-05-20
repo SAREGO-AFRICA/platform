@@ -16,6 +16,7 @@ import kycRoutes from './routes/kyc.js';
 import dealRoomRoutes from './routes/dealRooms.js';
 import statsRoutes from './routes/stats.js';
 import activityRoutes from './routes/activity.js';
+import capitalProvidersRoutes from './routes/capital-providers.js';
 import opportunitiesRoutes from './routes/opportunities.js';
 import { errorMiddleware } from './middleware/errors.js';
 
@@ -64,6 +65,7 @@ app.use('/api/deal-rooms', dealRoomRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/opportunities', opportunitiesRoutes);
+app.use('/api/capital-providers', capitalProvidersRoutes);
 
 // ---------- Error handler (last) ----------
 app.use(errorMiddleware);

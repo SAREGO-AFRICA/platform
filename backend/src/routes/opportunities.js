@@ -16,6 +16,8 @@ import { z } from 'zod';
 import { query, withTransaction } from '../db/index.js';
 import { asyncHandler, HttpError } from '../middleware/errors.js';
 import { requireAuth, requireTrustTier } from '../middleware/auth.js';
+import { countMatchingProvidersForFinanceRequest } from './capital-providers.js';
+// SAREGO-MATCHED-PROVIDERS-COUNT
 import { email } from '../utils/email.js';
 
 const router = Router();
@@ -689,6 +691,31 @@ router.post(
       applicants_count: applicantsCount,
       already_interested: alreadyInterested,
     });
+  })
+);
+
+
+// ============================================================
+// GET /api/opportunities/trade_finance/:id/matched-providers-count
+// Session E: institutional visibility panel.
+// Returns COUNT only (no provider identities) per "no public directory yet" policy.
+// ============================================================
+router.get(
+  '/trade_finance/:id/matched-providers-count',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id;
+    const r = await query(
+      `SELECT id, finance_type, sector, country_iso, destination_country_iso, value_usd
+         FROM trade_finance_requests
+        WHERE id = $1 AND status = 'published'
+        LIMIT 1`,
+      [id]
+    );
+    if (!r.rows[0]) {
+      return res.status(404).json({ error: 'Finance request not found' });
+    }
+    const count = await countMatchingProvidersForFinanceRequest(r.rows[0]);
+    res.json({ count });
   })
 );
 
