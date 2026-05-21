@@ -121,28 +121,60 @@ async function getOrgForUser(userId) {
  *   4. request.value_usd within [provider.min_ticket_usd, provider.max_ticket_usd]
  *      NULL on either side = pass (informational provider hasn't constrained)
  */
+// SAREGO-MATCH-HELPER-FIX-V2
 export async function countMatchingProvidersForFinanceRequest(req) {
   if (!req || !req.finance_type || !req.sector || !req.country_iso) {
     return 0;
   }
-  const r = await query(
-    `SELECT COUNT(*)::int AS c
-       FROM capital_provider_profiles p
-      WHERE p.status = 'published'
-        AND $1::finance_type = ANY(p.finance_types)
-        AND $2::sector       = ANY(p.sectors)
-        AND ($3 = ANY(p.countries_covered) OR ($4 IS NOT NULL AND $4 = ANY(p.countries_covered)))
-        AND (p.min_ticket_usd IS NULL OR $5::numeric IS NULL OR $5::numeric >= p.min_ticket_usd)
-        AND (p.max_ticket_usd IS NULL OR $5::numeric IS NULL OR $5::numeric <= p.max_ticket_usd)`,
-    [
+  try {
+    const hasValue       = req.value_usd != null;
+    const hasDestination = req.destination_country_iso != null;
+    const value          = hasValue ? Number(req.value_usd) : null;
+
+    // Build geography clause conditionally so we never bind NULL to a typeless param
+    const geographyClause = hasDestination
+      ? `(p.countries_covered && ARRAY[$3::text] OR p.countries_covered && ARRAY[$4::text])`
+      : `p.countries_covered && ARRAY[$3::text]`;
+
+    const params = [
       req.finance_type,
       req.sector,
       req.country_iso,
-      req.destination_country_iso ?? null,
-      req.value_usd ?? null,
-    ]
-  );
-  return r.rows[0]?.c ?? 0;
+    ];
+    if (hasDestination) params.push(req.destination_country_iso);
+    if (hasValue) params.push(value);
+
+    const valueParamIdx = params.length; // position of value param (only if hasValue)
+
+    const ticketClause = hasValue
+      ? `
+         AND (p.min_ticket_usd IS NULL OR $${valueParamIdx}::numeric >= p.min_ticket_usd)
+         AND (p.max_ticket_usd IS NULL OR $${valueParamIdx}::numeric <= p.max_ticket_usd)`
+      : '';
+
+    const sql = `
+      SELECT COUNT(*)::int AS c
+        FROM capital_provider_profiles p
+       WHERE p.status = 'published'
+         AND p.finance_types::text[] && ARRAY[$1::text]
+         AND p.sectors::text[]       && ARRAY[$2::text]
+         AND ${geographyClause}
+         ${ticketClause}
+    `;
+
+    const r = await query(sql, params);
+    return r.rows[0]?.c ?? 0;
+  } catch (err) {
+    console.error('[SAREGO match helper v2] SQL error:', err.message, 'request:', {
+      id: req.id,
+      finance_type: req.finance_type,
+      sector: req.sector,
+      country_iso: req.country_iso,
+      destination_country_iso: req.destination_country_iso,
+      value_usd: req.value_usd,
+    });
+    return 0;
+  }
 }
 
 // ============================================================
