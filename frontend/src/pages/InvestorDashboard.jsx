@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+// SAREGO-PROVIDER-NAV
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -13,7 +14,7 @@ import {
   FileText,
   Edit3,
   LogOut,
-} from 'lucide-react';
+, Banknote } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
 import { api, getAccessToken, setAccessToken } from '../lib/api.js';
@@ -154,6 +155,25 @@ export default function InvestorDashboard() {
                 <ShieldCheck size={14} /> Open Admin Console
                 <ArrowUpRight size={14} />
               </Link>
+            )}
+            {user.organization_type === 'capital_provider' && (
+              <>
+                <Link
+                  to="/my-provider-profile"
+                  className="btn btn-ghost fade-up fade-up-3"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Banknote size={14} /> My Provider Profile
+                </Link>
+                <Link
+                  to="/provider/browse"
+                  className="btn btn-ghost fade-up fade-up-3"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Banknote size={14} /> Browse Opportunities
+                  <ArrowUpRight size={14} />
+                </Link>
+              </>
             )}
             <Link
               to="/deal-rooms"

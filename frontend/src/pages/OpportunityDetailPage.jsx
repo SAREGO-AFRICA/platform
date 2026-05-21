@@ -267,6 +267,7 @@ export default function OpportunityDetailPage() {
             <div>
               <Panel title="Listing Detail">
                 {renderTypePanel(type, opp)}
+              {opp.type === 'trade_finance' && <InstitutionalVisibility id={opp.id} />}
               </Panel>
 
               {opp.metadata?.tags?.length > 0 && (
@@ -784,4 +785,74 @@ function countryDisplay(opp) {
     return `${opp.origin_country_iso} → ${opp.destination_country_iso}`;
   }
   return opp.country_iso || '—';
+}
+
+
+// ============================================================
+// InstitutionalVisibility — Session E
+// ============================================================
+// Count-only signal showing how many published capital provider profiles
+// match the current trade finance request on (finance_type, sector,
+// geography, ticket_range). No provider identities exposed per
+// "no public directory yet" policy until participation density exists.
+// SAREGO-INSTITUTIONAL-VISIBILITY
+function InstitutionalVisibility({ id }) {
+  const [count, setCount] = React.useState(null);
+  const [error, setError] = React.useState(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api(`/api/opportunities/trade_finance/${id}/matched-providers-count`);
+        if (cancelled) return;
+        setCount(typeof data.count === 'number' ? data.count : 0);
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Could not load institutional visibility');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (error) return null;       // fail silently — informational panel
+  if (count === null) return null; // still loading
+  if (count === 0) return null; // don't show empty signal
+
+  return (
+    <section style={{
+      marginTop: 24,
+      padding: '20px 22px',
+      background: 'rgba(160,135,217,0.06)',
+      border: '1px solid rgba(160,135,217,0.3)',
+      borderRadius: 8,
+    }}>
+      <div style={{
+        fontSize: 11,
+        letterSpacing: '0.14em',
+        textTransform: 'uppercase',
+        color: '#a087d9',
+        marginBottom: 10,
+      }}>
+        Institutional visibility
+      </div>
+      <div style={{
+        fontSize: 18,
+        fontWeight: 500,
+        color: 'var(--ivory-50)',
+        marginBottom: 6,
+        lineHeight: 1.35,
+      }}>
+        {count} compatible institutional provider{count === 1 ? '' : 's'} identified
+      </div>
+      <p style={{
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.6)',
+        lineHeight: 1.55,
+        margin: 0,
+      }}>
+        Mandates align with this request's finance type, sector, geography, and ticket range.
+        Capital providers can express interest from their browse view.
+      </p>
+    </section>
+  );
 }

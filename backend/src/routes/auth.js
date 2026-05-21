@@ -1,4 +1,5 @@
 import { Router } from 'express';
+// SAREGO-PROVIDER-NAV
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
 import { query, withTransaction } from '../db/index.js';
@@ -275,7 +276,9 @@ router.get(
     const r = await query(
       `SELECT u.id, u.email, u.full_name, u.role, u.trust_tier, u.organization_id,
               u.job_title, u.created_at,
-              o.name AS organization_name
+              o.name AS organization_name,
+              o.organization_type,
+              o.institution_category
        FROM users u
        LEFT JOIN organizations o ON o.id = u.organization_id
        WHERE u.id = $1`,
