@@ -286,11 +286,15 @@ export default function CapitalProviderProfilePage() {
     const payload = buildPayload();
     const parsed = profileSchema.safeParse(payload);
     if (!parsed.success) {
+      // SAREGO-PROFILE-DIAGNOSE
+      console.log('[SAREGO] Zod validation failed. Payload:', payload);
+      console.log('[SAREGO] Zod issues:', parsed.error.issues);
       const fieldErrors = {};
       parsed.error.issues.forEach((issue) => {
         const field = issue.path[0];
         if (field && !fieldErrors[field]) fieldErrors[field] = issue.message;
       });
+      console.log('[SAREGO] fieldErrors set:', fieldErrors);
       setErrors(fieldErrors);
       return;
     }
