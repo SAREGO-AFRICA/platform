@@ -1,4 +1,5 @@
 // src/routes/capital-providers.js
+// SAREGO-ENUM-ARRAY-CAST
 //
 // Session E: Capital Provider profiles — institutional capability infrastructure.
 //
@@ -161,7 +162,7 @@ router.get(
     }
 
     const [profileRes, orgRes] = await Promise.all([
-      query(`SELECT * FROM capital_provider_profiles WHERE organization_id = $1 LIMIT 1`, [orgId]),
+      query(`SELECT id, organization_id, tagline, summary, finance_types::text[] AS finance_types, sectors::text[] AS sectors, countries_covered, min_ticket_usd, max_ticket_usd, preferred_collateral::text[] AS preferred_collateral, typical_turnaround_days, website_url, status, verified_level, source_type, metadata, created_at, updated_at FROM capital_provider_profiles WHERE organization_id = $1 LIMIT 1`, [orgId]),
       query(`SELECT id, name, organization_type, institution_category, verification_level FROM organizations WHERE id = $1`, [orgId]),
     ]);
 
@@ -213,7 +214,7 @@ router.post(
             min_ticket_usd, max_ticket_usd, preferred_collateral,
             typical_turnaround_days, website_url, verified_level)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-         RETURNING *`,
+         RETURNING id, organization_id, tagline, summary, finance_types::text[] AS finance_types, sectors::text[] AS sectors, countries_covered, min_ticket_usd, max_ticket_usd, preferred_collateral::text[] AS preferred_collateral, typical_turnaround_days, website_url, status, verified_level, source_type, metadata, created_at, updated_at`,
         [
           userRow.organization_id,
           data.tagline,
@@ -277,7 +278,7 @@ router.patch(
       }
     }
     if (updates.length === 0) {
-      const cur = await query(`SELECT * FROM capital_provider_profiles WHERE id = $1`, [req.params.id]);
+      const cur = await query(`SELECT id, organization_id, tagline, summary, finance_types::text[] AS finance_types, sectors::text[] AS sectors, countries_covered, min_ticket_usd, max_ticket_usd, preferred_collateral::text[] AS preferred_collateral, typical_turnaround_days, website_url, status, verified_level, source_type, metadata, created_at, updated_at FROM capital_provider_profiles WHERE id = $1`, [req.params.id]);
       return res.json({ profile: normaliseProfile(cur.rows[0]) });
     }
     pi += 1;
@@ -287,7 +288,7 @@ router.patch(
       `UPDATE capital_provider_profiles
           SET ${updates.join(', ')}, updated_at = now()
         WHERE id = $${pi}
-        RETURNING *`,
+        RETURNING id, organization_id, tagline, summary, finance_types::text[] AS finance_types, sectors::text[] AS sectors, countries_covered, min_ticket_usd, max_ticket_usd, preferred_collateral::text[] AS preferred_collateral, typical_turnaround_days, website_url, status, verified_level, source_type, metadata, created_at, updated_at`,
       values
     );
     res.json({ profile: normaliseProfile(r.rows[0]) });
@@ -317,7 +318,7 @@ router.delete(
       `UPDATE capital_provider_profiles
           SET status = 'suspended', updated_at = now()
         WHERE id = $1
-        RETURNING *`,
+        RETURNING id, organization_id, tagline, summary, finance_types::text[] AS finance_types, sectors::text[] AS sectors, countries_covered, min_ticket_usd, max_ticket_usd, preferred_collateral::text[] AS preferred_collateral, typical_turnaround_days, website_url, status, verified_level, source_type, metadata, created_at, updated_at`,
       [req.params.id]
     );
     res.json({ profile: normaliseProfile(r.rows[0]) });
@@ -379,7 +380,7 @@ router.get(
     const orgId = userRes.rows[0]?.organization_id;
     if (orgId) {
       const pRes = await query(
-        `SELECT * FROM capital_provider_profiles WHERE organization_id = $1 LIMIT 1`,
+        `SELECT id, organization_id, tagline, summary, finance_types::text[] AS finance_types, sectors::text[] AS sectors, countries_covered, min_ticket_usd, max_ticket_usd, preferred_collateral::text[] AS preferred_collateral, typical_turnaround_days, website_url, status, verified_level, source_type, metadata, created_at, updated_at FROM capital_provider_profiles WHERE organization_id = $1 LIMIT 1`,
         [orgId]
       );
       profile = pRes.rows[0] || null;
@@ -473,7 +474,7 @@ router.get(
   '/:id',
   asyncHandler(async (req, res) => {
     const r = await query(
-      `SELECT cpp.*,
+      `SELECT cpp.id, cpp.organization_id, cpp.tagline, cpp.summary, cpp.finance_types::text[] AS finance_types, cpp.sectors::text[] AS sectors, cpp.countries_covered, cpp.min_ticket_usd, cpp.max_ticket_usd, cpp.preferred_collateral::text[] AS preferred_collateral, cpp.typical_turnaround_days, cpp.website_url, cpp.status, cpp.verified_level, cpp.source_type, cpp.metadata, cpp.created_at, cpp.updated_at,
               o.name AS organization_name,
               o.organization_type,
               o.institution_category,
