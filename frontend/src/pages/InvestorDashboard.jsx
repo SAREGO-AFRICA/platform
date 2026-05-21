@@ -14,7 +14,7 @@ import {
   FileText,
   Edit3,
   LogOut,
-, Banknote } from 'lucide-react';
+  Banknote } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
 import { api, getAccessToken, setAccessToken } from '../lib/api.js';
