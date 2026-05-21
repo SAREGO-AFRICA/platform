@@ -1,3 +1,4 @@
+// SAREGO-PROFILE-UX-FIX
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { z } from 'zod';
@@ -70,7 +71,7 @@ const profileSchema = z.object({
   min_ticket_usd:          z.union([z.number().nonnegative(), z.null()]).optional(),
   max_ticket_usd:          z.union([z.number().nonnegative(), z.null()]).optional(),
   typical_turnaround_days: z.union([z.number().int().positive(), z.null()]).optional(),
-  website_url:             z.string().trim().url().optional().or(z.literal('')),
+  website_url:             z.string().trim().optional().or(z.literal('')),
 });
 
 export default function CapitalProviderProfilePage() {
@@ -205,7 +206,10 @@ export default function CapitalProviderProfilePage() {
                   </label>
                 ))}
               </div>
-              {serverError && <ErrorBanner message={serverError} />}
+              {Object.keys(errors).length > 0 && (
+            <ErrorBanner message="Please review the highlighted fields above before saving." />
+          )}
+          {serverError && <ErrorBanner message={serverError} />}
               <button
                 type="button"
                 disabled={submitting}
@@ -270,7 +274,7 @@ export default function CapitalProviderProfilePage() {
       min_ticket_usd:          form.min_ticket_usd === '' ? null : Number(form.min_ticket_usd),
       max_ticket_usd:          form.max_ticket_usd === '' ? null : Number(form.max_ticket_usd),
       typical_turnaround_days: form.typical_turnaround_days === '' ? null : parseInt(form.typical_turnaround_days, 10),
-      website_url:             form.website_url.trim() || null,
+      website_url:             normalizeUrl(form.website_url) || null,
     };
   }
 
@@ -364,11 +368,14 @@ export default function CapitalProviderProfilePage() {
                 <input type="number" min="1" max="365" step="1" value={form.typical_turnaround_days} onChange={(e) => setField('typical_turnaround_days', e.target.value)} style={inputStyle(!!errors.typical_turnaround_days)} placeholder="14" />
               </Field>
               <Field label="Institutional website" error={errors.website_url} hint="Optional. Linked from matched-provider context.">
-                <input type="url" value={form.website_url} onChange={(e) => setField('website_url', e.target.value)} style={inputStyle(!!errors.website_url)} placeholder="https://example.com" />
+                <input type="text" value={form.website_url} onChange={(e) => setField('website_url', e.target.value)} style={inputStyle(!!errors.website_url)} placeholder="example.com or https://example.com" />
               </Field>
             </div>
           </FormBlock>
 
+          {Object.keys(errors).length > 0 && (
+            <ErrorBanner message="Please review the highlighted fields above before saving." />
+          )}
           {serverError && <ErrorBanner message={serverError} />}
 
           {successFlash && (
@@ -551,4 +558,15 @@ function formatOrgType(t) {
 function formatCategory(c) {
   if (!c) return 'institution';
   return c.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+
+// SAREGO-PROFILE-UX-FIX helper: normalize URLs without scheme
+function normalizeUrl(s) {
+  if (!s) return null;
+  const trimmed = s.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  // Accept bare 'example.com' or 'www.example.com' — prefix https://
+  return 'https://' + trimmed;
 }
