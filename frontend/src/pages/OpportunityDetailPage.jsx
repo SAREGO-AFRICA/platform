@@ -267,8 +267,8 @@ export default function OpportunityDetailPage() {
             <div>
               <Panel title="Listing Detail">
                 {renderTypePanel(type, opp)}
-              {opp.type === 'trade_finance' && <InstitutionalVisibility id={opp.id} />}
               </Panel>
+              {type === 'trade_finance' && <InstitutionalVisibility id={id} />}
 
               {opp.metadata?.tags?.length > 0 && (
                 <Panel title="Tags" tight>
