@@ -472,6 +472,29 @@ router.post(
     );
     purged.trade_corridors = corridors.rowCount;
 
+    // SAREGO-PURGE-PROVIDERS
+    // Capital provider profiles + parent organizations (Session E demos).
+    // Order: profiles first (FK dependents), then organizations.
+    // Scoped strictly to organization_type='capital_provider' AND metadata.demo=true.
+    const cppDel = await query(
+      `DELETE FROM capital_provider_profiles
+        WHERE organization_id IN (
+          SELECT id FROM organizations
+           WHERE organization_type = 'capital_provider'
+             AND metadata->>'demo' = 'true'
+        )
+        RETURNING id`
+    );
+    purged.capital_provider_profiles = cppDel.rowCount;
+
+    const orgDel = await query(
+      `DELETE FROM organizations
+        WHERE organization_type = 'capital_provider'
+          AND metadata->>'demo' = 'true'
+        RETURNING id`
+    );
+    purged.capital_provider_organizations = orgDel.rowCount;
+
     res.json({ purged });
   })
 );
