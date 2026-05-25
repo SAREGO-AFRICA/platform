@@ -13,6 +13,7 @@ import InvestorsPage from './pages/InvestorsPage.jsx';
 import GovernmentsPage from './pages/GovernmentsPage.jsx';
 import TradeHubPage from './pages/TradeHubPage.jsx';
 import OpportunityDetailPage from './pages/OpportunityDetailPage.jsx';
+import OpportunitiesPage from './pages/OpportunitiesPage.jsx'; // SAREGO-OPP-PAGE-ROUTE
 import CommodityRequestFormPage from './pages/CommodityRequestFormPage.jsx';
 import AgriOfftakeFormPage from './pages/AgriOfftakeFormPage.jsx';
 import TenderFormPage from './pages/TenderFormPage.jsx';
@@ -54,6 +55,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/opportunities/trade_finance/:id/edit" element={<TradeFinanceFormPage />} />
         <Route path="/my-provider-profile" element={<CapitalProviderProfilePage />} />
            <Route path="/provider/browse" element={<ProviderBrowsePage />} />
+           <Route path="/opportunities" element={<OpportunitiesPage />} />
         <Route path="/opportunities/:type/:id" element={<OpportunityDetailPage />} />
 
         {/* Project routes — defined BEFORE /:slug so they take priority */}
