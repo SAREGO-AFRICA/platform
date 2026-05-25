@@ -214,16 +214,19 @@ function FilterBar({ filters, setFilter, reset, totalResults }) {
           <button
             type="button"
             onClick={reset}
+            // SAREGO-RESET-BTN-AMBER
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 4,
               padding: '4px 10px',
               borderRadius: 6,
-              border: '1px solid rgba(255,255,255,0.1)',
-              background: 'transparent',
-              color: 'rgba(255,255,255,0.6)',
+              border: '1px solid rgba(244, 191, 76, 0.4)',
+              background: 'rgba(244, 191, 76, 0.08)',
+              color: '#f4bf4c',
               fontSize: 12,
+              fontWeight: 500,
+              letterSpacing: 0.3,
               cursor: 'pointer',
             }}
           >
