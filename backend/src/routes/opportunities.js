@@ -719,4 +719,157 @@ router.get(
   })
 );
 
+
+// ============================================================
+// GET /api/opportunities/browse
+// Session G: cross-vertical aggregate browse.
+//
+// Returns up to 50 listings across all 5 verticals, normalized to a common
+// shape. Sorted: verification tier (institutional > verified > unverified),
+// then published_at DESC. Excludes expired listings.
+//
+// Query params (all optional):
+//   sector         — single sector value, filters all verticals
+//   country_iso    — 2-letter ISO; matches country_iso for most verticals,
+//                    also matches origin_country_iso/destination_country_iso
+//                    for logistics_load and destination_country_iso for trade_finance
+//   type           — single vertical (commodity_request, logistics_load,
+//                    agri_offtake, tender, trade_finance)
+//   min_value_usd  — numeric, inclusive
+//   max_value_usd  — numeric, inclusive
+//   verified_level — minimum tier ('verified' or 'institutional')
+//
+// PUBLIC endpoint — no requireAuth. Discovery is open; engagement is gated.
+//
+// SAREGO-OPP-BROWSE
+// ============================================================
+const BROWSE_QUERY_SCHEMA = z.object({
+  sector:         z.enum(['mining', 'agriculture', 'manufacturing', 'logistics', 'infrastructure', 'energy', 'commodities', 'cross_sector', 'other']).optional(),
+  country_iso:    z.string().regex(/^[A-Z]{2}$/).optional(),
+  type:           z.enum(['commodity_request', 'logistics_load', 'agri_offtake', 'tender', 'trade_finance']).optional(),
+  min_value_usd:  z.coerce.number().nonnegative().optional(),
+  max_value_usd:  z.coerce.number().nonnegative().optional(),
+  verified_level: z.enum(['verified', 'institutional']).optional(),
+});
+
+router.get(
+  '/browse',
+  asyncHandler(async (req, res) => {
+    const params = BROWSE_QUERY_SCHEMA.parse(req.query || {});
+
+    // For each vertical, build a SELECT that normalizes columns to a common shape.
+    // Country matching is vertical-specific because logistics_load uses origin/destination
+    // and trade_finance has both country_iso AND destination_country_iso.
+    //
+    // Build common WHERE fragment shared across all 5 SELECTs.
+    const sqlParams = [];
+    function addParam(v) { sqlParams.push(v); return `$${sqlParams.length}`; }
+
+    // Type-agnostic filters
+    const wheres = [`status = 'published'`, `(expires_at IS NULL OR expires_at >= now())`];
+    if (params.sector)         wheres.push(`sector = ${addParam(params.sector)}::sector`);
+    if (params.min_value_usd !== undefined) wheres.push(`value_usd >= ${addParam(params.min_value_usd)}::numeric`);
+    if (params.max_value_usd !== undefined) wheres.push(`value_usd <= ${addParam(params.max_value_usd)}::numeric`);
+    if (params.verified_level) {
+      // Map filter value to a SQL fragment that captures tier hierarchy:
+      //   'verified'      -> includes 'verified' OR 'institutional'
+      //   'institutional' -> only 'institutional'
+      if (params.verified_level === 'institutional') {
+        wheres.push(`verified_level = 'institutional'`);
+      } else {
+        wheres.push(`verified_level IN ('verified', 'institutional')`);
+      }
+    }
+    const baseWhere = wheres.join(' AND ');
+
+    // Country matching: most verticals just use country_iso; logistics_load and
+    // trade_finance can also match destination_country_iso (and origin for logistics).
+    function countryWhere(table) {
+      if (!params.country_iso) return baseWhere;
+      const param = addParam(params.country_iso);
+      if (table === 'logistics_loads') {
+        return `${baseWhere} AND (country_iso = ${param} OR origin_country_iso = ${param} OR destination_country_iso = ${param})`;
+      }
+      if (table === 'trade_finance_requests') {
+        return `${baseWhere} AND (country_iso = ${param} OR destination_country_iso = ${param})`;
+      }
+      return `${baseWhere} AND country_iso = ${param}`;
+    }
+
+    // Normalized SELECT shape (same columns + order across every UNION arm)
+    // 'type' column distinguishes which vertical each row came from.
+    const verticals = [
+      { type: 'commodity_request', table: 'commodity_requests' },
+      { type: 'logistics_load',    table: 'logistics_loads' },
+      { type: 'agri_offtake',      table: 'agri_offtake_requests' },
+      { type: 'tender',            table: 'tenders' },
+      { type: 'trade_finance',     table: 'trade_finance_requests' },
+    ];
+
+    // If type filter is set, restrict to just that vertical
+    const activeVerticals = params.type
+      ? verticals.filter(v => v.type === params.type)
+      : verticals;
+
+    if (activeVerticals.length === 0) {
+      return res.json({ total: 0, opportunities: [] });
+    }
+
+    const unionParts = activeVerticals.map(({ type, table }) => `
+      SELECT
+        id,
+        '${type}'::text AS type,
+        title,
+        summary,
+        country_iso,
+        value_usd,
+        sector::text AS sector,
+        verified_level,
+        applicants_count,
+        published_at,
+        expires_at
+        FROM ${table}
+       WHERE ${countryWhere(table)}
+    `);
+
+    // Tier rank for sorting (institutional=0 most prominent, then verified, then unverified)
+    const sql = `
+      WITH all_opportunities AS (
+        ${unionParts.join('\n        UNION ALL\n')}
+      )
+      SELECT *,
+             CASE verified_level
+               WHEN 'institutional' THEN 0
+               WHEN 'verified' THEN 1
+               ELSE 2
+             END AS tier_rank
+        FROM all_opportunities
+       ORDER BY tier_rank ASC, published_at DESC NULLS LAST
+       LIMIT 50
+    `;
+
+    const r = await query(sql, sqlParams);
+
+    const opportunities = r.rows.map((row) => ({
+      id: row.id,
+      type: row.type,
+      title: row.title,
+      summary: row.summary,
+      country_iso: row.country_iso,
+      value_usd: row.value_usd != null ? Number(row.value_usd) : null,
+      sector: row.sector,
+      verified_level: row.verified_level,
+      applicants_count: row.applicants_count,
+      published_at: row.published_at,
+      expires_at: row.expires_at,
+    }));
+
+    res.json({
+      total: opportunities.length,
+      capped_at_50: opportunities.length === 50,
+      opportunities,
+    });
+  })
+);
+
 export default router;
