@@ -178,7 +178,7 @@ function Hero() {
           className="flex gap-3 fade-up fade-up-3"
           style={{ marginTop: 'var(--space-6)', flexWrap: 'wrap' }}
         >
-          <Link to="/trade-hub" className="btn btn-gold">
+          <Link to="/opportunities" /* SAREGO-CTA-LANDING */ className="btn btn-gold">
             Explore Opportunities
             <ArrowUpRight size={16} />
           </Link>

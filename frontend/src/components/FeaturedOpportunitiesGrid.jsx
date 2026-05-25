@@ -62,7 +62,7 @@ export default function FeaturedOpportunitiesGrid() {
           </h2>
         </div>
         <Link
-          to="/trade-hub"
+          to="/opportunities" /* SAREGO-CTA-FEATURED */
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             fontSize: 13, color: 'var(--gold-400, #dcc068)',

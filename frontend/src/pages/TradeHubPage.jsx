@@ -9,7 +9,7 @@ const config = {
   subhead:
     'Commodity flows, manufacturing demand, logistics routes and trade finance — coordinated across the SADC region in a single live exchange. Suppliers, buyers, and transporters in one verified marketplace.',
   primaryCta: { label: 'Join the Exchange', href: '/login?mode=register' },
-  secondaryCta: { label: 'Browse Live Opportunities', href: '/#marketplace' },
+  secondaryCta: { label: 'Browse Live Opportunities', href: '/opportunities' }, // SAREGO-CTA-TRADEHUB
 
   whyTitle: 'The commercial layer of SADC economic infrastructure.',
   valueProps: [

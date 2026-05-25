@@ -534,11 +534,13 @@ export default function OpportunitiesPage() {
           }}>
             Opportunities
           </h1>
+          {/* SAREGO-TAGLINE-GOLD */}
           <p style={{
             margin: 0,
             fontSize: 16,
-            color: 'rgba(255, 255, 255, 0.6)',
-            fontWeight: 400,
+            color: '#f4bf4c',
+            fontWeight: 500,
+            letterSpacing: 0.2,
           }}>
             Live economic activity across Southern Africa
           </p>
