@@ -355,38 +355,28 @@ const BROWSE_QUERY_SCHEMA = z.object({
   verified_level: z.enum(['verified', 'institutional']).optional(),
 });
 
+// SAREGO-BROWSE-V2
 router.get(
   '/browse',
   asyncHandler(async (req, res) => {
     const params = BROWSE_QUERY_SCHEMA.parse(req.query || {});
 
-    // For each vertical, build a SELECT that normalizes columns to a common shape.
-    // Country matching is vertical-specific because logistics_load uses origin/destination
-    // and trade_finance has both country_iso AND destination_country_iso.
-    //
-    // Build common WHERE fragment shared across all 5 SELECTs.
     const sqlParams = [];
     function addParam(v) { sqlParams.push(v); return `$${sqlParams.length}`; }
 
-    // Type-agnostic filters
     const wheres = [`status = 'published'`, `(expires_at IS NULL OR expires_at >= now())`];
-    if (params.sector)         wheres.push(`sector = ${addParam(params.sector)}::sector`);
+    if (params.sector)         wheres.push(`sector::text = ${addParam(params.sector)}::text`);
     if (params.min_value_usd !== undefined) wheres.push(`value_usd >= ${addParam(params.min_value_usd)}::numeric`);
     if (params.max_value_usd !== undefined) wheres.push(`value_usd <= ${addParam(params.max_value_usd)}::numeric`);
     if (params.verified_level) {
-      // Map filter value to a SQL fragment that captures tier hierarchy:
-      //   'verified'      -> includes 'verified' OR 'institutional'
-      //   'institutional' -> only 'institutional'
       if (params.verified_level === 'institutional') {
-        wheres.push(`verified_level = 'institutional'`);
+        wheres.push(`verified_level::text = 'institutional'`);
       } else {
-        wheres.push(`verified_level IN ('verified', 'institutional')`);
+        wheres.push(`verified_level::text IN ('verified', 'institutional')`);
       }
     }
     const baseWhere = wheres.join(' AND ');
 
-    // Country matching: most verticals just use country_iso; logistics_load and
-    // trade_finance can also match destination_country_iso (and origin for logistics).
     function countryWhere(table) {
       if (!params.country_iso) return baseWhere;
       const param = addParam(params.country_iso);
@@ -399,8 +389,6 @@ router.get(
       return `${baseWhere} AND country_iso = ${param}`;
     }
 
-    // Normalized SELECT shape (same columns + order across every UNION arm)
-    // 'type' column distinguishes which vertical each row came from.
     const verticals = [
       { type: 'commodity_request', table: 'commodity_requests' },
       { type: 'logistics_load',    table: 'logistics_loads' },
@@ -409,7 +397,6 @@ router.get(
       { type: 'trade_finance',     table: 'trade_finance_requests' },
     ];
 
-    // If type filter is set, restrict to just that vertical
     const activeVerticals = params.type
       ? verticals.filter(v => v.type === params.type)
       : verticals;
@@ -418,24 +405,25 @@ router.get(
       return res.json({ total: 0, opportunities: [] });
     }
 
+    // Every column cast EXPLICITLY to its canonical type so UNION ALL succeeds
+    // regardless of underlying enum/text/varchar/timestamp/timestamptz differences.
     const unionParts = activeVerticals.map(({ type, table }) => `
       SELECT
-        id,
-        '${type}'::text AS type,
-        title,
-        summary,
-        country_iso,
-        value_usd,
-        sector::text AS sector,
-        verified_level,
-        applicants_count,
-        published_at,
-        expires_at
+        id::uuid                  AS id,
+        '${type}'::text           AS type,
+        title::text               AS title,
+        summary::text             AS summary,
+        country_iso::text         AS country_iso,
+        value_usd::numeric        AS value_usd,
+        sector::text              AS sector,
+        verified_level::text      AS verified_level,
+        applicants_count::integer AS applicants_count,
+        published_at::timestamptz AS published_at,
+        expires_at::timestamptz   AS expires_at
         FROM ${table}
        WHERE ${countryWhere(table)}
     `);
 
-    // Tier rank for sorting (institutional=0 most prominent, then verified, then unverified)
     const sql = `
       WITH all_opportunities AS (
         ${unionParts.join('\n        UNION ALL\n')}
@@ -451,27 +439,34 @@ router.get(
        LIMIT 50
     `;
 
-    const r = await query(sql, sqlParams);
+    try {
+      const r = await query(sql, sqlParams);
 
-    const opportunities = r.rows.map((row) => ({
-      id: row.id,
-      type: row.type,
-      title: row.title,
-      summary: row.summary,
-      country_iso: row.country_iso,
-      value_usd: row.value_usd != null ? Number(row.value_usd) : null,
-      sector: row.sector,
-      verified_level: row.verified_level,
-      applicants_count: row.applicants_count,
-      published_at: row.published_at,
-      expires_at: row.expires_at,
-    }));
+      const opportunities = r.rows.map((row) => ({
+        id: row.id,
+        type: row.type,
+        title: row.title,
+        summary: row.summary,
+        country_iso: row.country_iso,
+        value_usd: row.value_usd != null ? Number(row.value_usd) : null,
+        sector: row.sector,
+        verified_level: row.verified_level,
+        applicants_count: row.applicants_count,
+        published_at: row.published_at,
+        expires_at: row.expires_at,
+      }));
 
-    res.json({
-      total: opportunities.length,
-      capped_at_50: opportunities.length === 50,
-      opportunities,
-    });
+      res.json({
+        total: opportunities.length,
+        capped_at_50: opportunities.length === 50,
+        opportunities,
+      });
+    } catch (err) {
+      console.error('[SAREGO browse] SQL error:', err.message);
+      console.error('[SAREGO browse] params:', JSON.stringify(params));
+      console.error('[SAREGO browse] sqlParams:', sqlParams);
+      throw err; // re-throw so asyncHandler triggers the 500
+    }
   })
 );
 
