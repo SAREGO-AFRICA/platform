@@ -54,7 +54,7 @@ const TYPE_META = {
   },
   trade_finance:     {
     label: 'Trade Finance',
-    color: '#c084fc', // purple-light
+    color: '#ec4899', // purple-light
     icon: Banknote,
   },
 };

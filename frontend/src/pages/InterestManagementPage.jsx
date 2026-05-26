@@ -223,9 +223,9 @@ function DeclineReasonModal({ open, onConfirm, onCancel, reasonRequired, busy })
           Decline this party?
         </h3>
         <p style={{ margin: 0, marginBottom: 16, fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
-          {reasonRequired
-            ? 'Since you engaged with this party, please provide a brief reason for declining.'
-            : 'Optionally, you may provide a reason for the decline (will not be shared with the party).'}
+          {/* SAREGO-DECLINE-OPTIONAL: simplified copy */}
+          Optionally provide a reason for your records. The declined party will not see it.
+
         </p>
         <textarea
           value={reason}
@@ -571,10 +571,10 @@ export default function InterestManagementPage() {
   const handleAction = useCallback(async (action, interest) => {
     const targetStatus = ACTION_TO_STATUS[action];
 
-    // Decline: open modal (reason required if currentStatus was shortlisted/contacted)
+    // SAREGO-DECLINE-OPTIONAL
+    // Decline: open modal (reason always optional - kept in owner records only, never emailed)
     if (action === 'decline') {
-      const reasonRequired = ['shortlisted', 'contacted'].includes(interest.status);
-      setDeclineModal({ interest, reasonRequired });
+      setDeclineModal({ interest, reasonRequired: false });
       return;
     }
     // Award: open confirmation modal
