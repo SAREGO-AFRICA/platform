@@ -18,6 +18,7 @@ import statsRoutes from './routes/stats.js';
 import activityRoutes from './routes/activity.js';
 import capitalProvidersRoutes from './routes/capital-providers.js';
 import opportunitiesRoutes from './routes/opportunities.js';
+import listingInterestRoutes from './routes/listing-interest.js'; // SAREGO-LISTING-INTEREST-ROUTES
 import { errorMiddleware } from './middleware/errors.js';
 
 const app = express();
@@ -65,6 +66,7 @@ app.use('/api/deal-rooms', dealRoomRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/opportunities', opportunitiesRoutes);
+app.use('/api/my-listings', listingInterestRoutes); // SAREGO-LISTING-INTEREST-ROUTES
 app.use('/api/capital-providers', capitalProvidersRoutes);
 
 // ---------- Error handler (last) ----------
