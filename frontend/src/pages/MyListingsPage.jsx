@@ -1,7 +1,7 @@
 // SAREGO-TRADE-FINANCE-INTEGRATION
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Lock, Users, MapPin, Clock, AlertCircle, Package, Truck, Sprout, Briefcase, Banknote } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Plus, Pencil, Lock, Users, MapPin, Clock, AlertCircle, Package, Truck, Sprout, Briefcase, Banknote, CheckCircle2 } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
 import { api, getAccessToken } from '../lib/api.js';
@@ -39,6 +39,10 @@ const VERTICALS = [
 ];
 
 export default function MyListingsPage() {
+  // SAREGO-AWARDED-BANNER
+  const _routerLocation = useLocation();
+  const _awardedMessage = _routerLocation?.state?.awardedMessage || null;
+
   const navigate = useNavigate();
   const isLoggedIn = !!getAccessToken();
   const [listings, setListings] = useState(null);
@@ -88,7 +92,22 @@ export default function MyListingsPage() {
       <Shell>
         <section style={{ padding: '80px 0', textAlign: 'center' }}>
           <div className="container" style={{ maxWidth: 520 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 500, marginBottom: 14 }}>Sign in to manage your listings</h1>
+                  {_awardedMessage && (
+        <div style={{
+          marginBottom: 16,
+          padding: '10px 16px',
+          background: 'rgba(132, 204, 22, 0.10)',
+          border: '1px solid rgba(132, 204, 22, 0.3)',
+          borderRadius: 8,
+          fontSize: 13,
+          color: '#84cc16',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <CheckCircle2 size={14} />
+          {_awardedMessage}
+        </div>
+      )}
+      <h1 style={{ fontSize: 24, fontWeight: 500, marginBottom: 14 }}>Sign in to manage your listings</h1>
             <p style={{ color: 'rgba(255,255,255,0.65)', marginBottom: 32, lineHeight: 1.55 }}>
               View and manage opportunities you've posted to SAREGO.
             </p>
@@ -335,6 +354,14 @@ function ListingRow({ listing, type, closingState, onClose }) {
           style={{ fontSize: 12, padding: '7px 14px' }}
         >
           <Pencil size={13} /> Edit
+        </Link>
+        {/* SAREGO-MANAGE-INTEREST-BTN */}
+        <Link
+          to={`/my-listings/${type}/${listing.id}/interest`}
+          className="btn btn-ghost-light"
+          style={{ fontSize: 12, padding: '7px 14px' }}
+        >
+          <Users size={13} /> Manage Interest{listing.pending_interest_count > 0 ? ` (${listing.pending_interest_count})` : ''}
         </Link>
         {listing.status === 'published' && (
           <button

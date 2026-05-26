@@ -297,12 +297,21 @@ router.get(
     await Promise.all(types.map(async (type) => {
       const table = TYPE_TO_TABLE[type];
       const extras = TYPE_EXTRAS[table];
+      // SAREGO-PENDING-INTEREST-COUNT
+      // Added pending_interest_count: count of non-terminal interests
+      // (expressed/shortlisted/contacted) for each listing. Drives the
+      // "Manage Interest (N)" button in MyListingsPage.
       const r = await query(
         `SELECT id, title, summary, country_iso, value_usd, status,
                 verified_level, expires_at, applicants_count,
                 owner_user_id, owner_org_id, source_type, metadata,
                 ${extras},
-                published_at, created_at, updated_at
+                published_at, created_at, updated_at,
+                (SELECT COUNT(*)::int FROM opportunity_interests
+                  WHERE opportunity_type = '${type}'
+                    AND opportunity_id = ${table}.id
+                    AND status IN ('expressed', 'shortlisted', 'contacted')
+                ) AS pending_interest_count
            FROM ${table}
           WHERE owner_user_id = $1
           ORDER BY created_at DESC`,
