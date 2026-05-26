@@ -28,6 +28,8 @@ import { z } from 'zod';
 import { query, withTransaction } from '../db/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/errors.js';
+// SAREGO-INTEREST-EMAILS-V2
+import { email } from '../utils/email.js';
 
 const router = Router();
 
@@ -64,6 +66,62 @@ const STATUS_TO_TIMESTAMP_COLUMN = {
 
 // Status values where contact info is revealed to the owner
 const STATUSES_REVEALING_CONTACT = ['shortlisted', 'contacted', 'awarded'];
+
+// ============================================================
+// Email notification helpers (Session H Phase 6)
+// ============================================================
+const TYPE_LABEL = {
+  commodity_request: 'Commodity Request',
+  logistics_load:    'Logistics Load',
+  agri_offtake:      'Agri Offtake',
+  tender:            'Tender',
+  trade_finance:     'Trade Finance',
+};
+
+// Fetch the email context for a given interest_id.
+// Returns { party_name, party_email, owner_org_name, listing_title, indicative }
+// Owner_org_name is derived from the listing's owner_org_id, NOT the interest's
+// org_id (which is the *interested party's* org).
+async function fetchInterestEmailContext(listingType, listingId, interestId) {
+  const tableMap = LISTING_TABLES;
+  const listingTable = tableMap[listingType];
+  if (!listingTable) return null;
+
+  // Single query: fetch user + indicative + listing title + owner org name
+  const r = await query(
+    `SELECT
+       u.full_name AS party_name,
+       u.email     AS party_email,
+       oi.indicative_amount,
+       oi.indicative_rate_range,
+       oi.indicative_tenor,
+       oi.conditions,
+       lst.title AS listing_title,
+       owner_org.name AS owner_org_name
+       FROM opportunity_interests oi
+       JOIN users u ON u.id = oi.user_id
+       JOIN ${listingTable} lst ON lst.id = $1
+       LEFT JOIN organizations owner_org ON owner_org.id = lst.owner_org_id
+       WHERE oi.id = $2`,
+    [listingId, interestId]
+  );
+  if (r.rowCount === 0) return null;
+  const row = r.rows[0];
+  return {
+    party_name: row.party_name,
+    party_email: row.party_email,
+    owner_org_name: row.owner_org_name,
+    listing_title: row.listing_title,
+    indicative: {
+      amount:     row.indicative_amount != null ? Number(row.indicative_amount) : null,
+      rate_range: row.indicative_rate_range,
+      tenor:      row.indicative_tenor,
+      conditions: row.conditions,
+    },
+  };
+}
+
+
 
 // ============================================================
 // Helper: verify ownership of a listing
@@ -275,6 +333,31 @@ router.patch(
         RETURNING id, status, ${tsColumn} AS transition_at`,
         params
       );
+
+      // Fire-and-forget email notification (shortlist / decline only — 'contacted' is internal)
+      try {
+        const ctx = await fetchInterestEmailContext(listing_type, listing_id, interest_id);
+        if (ctx && ctx.party_email) {
+          const templateInput = {
+            to: ctx.party_email,
+            partyName: ctx.party_name,
+            ownerOrgName: ctx.owner_org_name,
+            listingTitle: ctx.listing_title,
+            listingType: listing_type,
+            listingId: listing_id,
+            listingTypeLabel: TYPE_LABEL[listing_type] || listing_type,
+          };
+          if (body.status === 'shortlisted') {
+            email.interestShortlisted(templateInput);
+          } else if (body.status === 'declined') {
+            email.interestDeclined(templateInput);
+          }
+          // 'contacted' is internal-only — no email
+        }
+      } catch (emailErr) {
+        console.warn('[interest-email] context fetch failed:', emailErr?.message);
+      }
+
       return res.json({
         updated: r.rows[0],
         cascade: null,
@@ -324,6 +407,51 @@ router.patch(
         listing_closed: listingR.rows[0],
       };
     });
+
+    // Fire-and-forget notification emails after award cascade
+    try {
+      const awardedCtx = await fetchInterestEmailContext(listing_type, listing_id, interest_id);
+      if (awardedCtx && awardedCtx.party_email) {
+        email.interestAwarded({
+          to: awardedCtx.party_email,
+          partyName: awardedCtx.party_name,
+          ownerOrgName: awardedCtx.owner_org_name,
+          listingTitle: awardedCtx.listing_title,
+          listingType: listing_type,
+          listingId: listing_id,
+          listingTypeLabel: TYPE_LABEL[listing_type] || listing_type,
+          indicative: awardedCtx.indicative,
+        });
+      }
+
+      // Each auto-declined party gets a declined email.
+      // Cascade just declined them with system reason; we don't include the reason per Q12=b.
+      const declinedRows = await query(
+        `SELECT u.full_name, u.email
+           FROM opportunity_interests oi
+           JOIN users u ON u.id = oi.user_id
+          WHERE oi.opportunity_type = $1
+            AND oi.opportunity_id = $2
+            AND oi.id != $3
+            AND oi.status = 'declined'
+            AND oi.declined_reason = 'Listing awarded to another party'`,
+        [listing_type, listing_id, interest_id]
+      );
+      for (const dRow of declinedRows.rows) {
+        if (!dRow.email) continue;
+        email.interestDeclined({
+          to: dRow.email,
+          partyName: dRow.full_name,
+          ownerOrgName: awardedCtx?.owner_org_name,
+          listingTitle: awardedCtx?.listing_title || 'this opportunity',
+          listingType: listing_type,
+          listingId: listing_id,
+          listingTypeLabel: TYPE_LABEL[listing_type] || listing_type,
+        });
+      }
+    } catch (emailErr) {
+      console.warn('[interest-email] award cascade emails failed:', emailErr?.message);
+    }
 
     res.json({
       updated: { id: interest_id, status: 'awarded' },

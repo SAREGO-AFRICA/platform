@@ -2,6 +2,12 @@
 // Fire-and-forget transactional email helper, backed by Resend.
 
 import { Resend } from 'resend';
+// SAREGO-INTEREST-SENDERS
+import {
+  shortlistedEmail as _shortlistedEmail,
+  declinedEmail as _declinedEmail,
+  awardedEmail as _awardedEmail,
+} from '../templates/interest-emails.js';
 import { query } from '../db/index.js';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -363,6 +369,23 @@ export function sendOpportunityInterestExpressedEmail({
 
 // ---------- Public fire-and-forget wrappers ----------
 
+// ---------- Interest state-transition emails (Session H) ----------
+
+export function sendInterestShortlistedEmail({ to, partyName, ownerOrgName, listingTitle, listingType, listingId, listingTypeLabel }) {
+  const t = _shortlistedEmail({ partyName, ownerOrgName, listingTitle, listingType, listingId, listingTypeLabel });
+  return send({ to, subject: t.subject, html: t.html, text: t.text });
+}
+
+export function sendInterestDeclinedEmail({ to, partyName, ownerOrgName, listingTitle, listingType, listingId, listingTypeLabel }) {
+  const t = _declinedEmail({ partyName, ownerOrgName, listingTitle, listingType, listingId, listingTypeLabel });
+  return send({ to, subject: t.subject, html: t.html, text: t.text });
+}
+
+export function sendInterestAwardedEmail({ to, partyName, ownerOrgName, listingTitle, listingType, listingId, listingTypeLabel, indicative }) {
+  const t = _awardedEmail({ partyName, ownerOrgName, listingTitle, listingType, listingId, listingTypeLabel, indicative });
+  return send({ to, subject: t.subject, html: t.html, text: t.text });
+}
+
 export const email = {
   welcome: (args) => fireAndForget(sendWelcomeEmail(args)),
   kycSubmitted: (args) => fireAndForget(sendKycSubmittedNotifyAdmins(args)),
@@ -372,6 +395,10 @@ export const email = {
   dealRoomDocumentUploaded: (args) => fireAndForget(sendDealRoomDocumentUploadedEmail(args)),
   dealRoomMemberInvited: (args) => fireAndForget(sendDealRoomMemberInvitedEmail(args)),
   opportunityInterestExpressed: (args) => fireAndForget(sendOpportunityInterestExpressedEmail(args)),
+  // SAREGO-INTEREST-SENDERS
+  interestShortlisted: (args) => fireAndForget(sendInterestShortlistedEmail(args)),
+  interestDeclined:    (args) => fireAndForget(sendInterestDeclinedEmail(args)),
+  interestAwarded:     (args) => fireAndForget(sendInterestAwardedEmail(args)),
 };
 
 // ---------- Utilities ----------
