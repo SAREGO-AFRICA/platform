@@ -14,6 +14,7 @@ import GovernmentsPage from './pages/GovernmentsPage.jsx';
 import TradeHubPage from './pages/TradeHubPage.jsx';
 import OpportunityDetailPage from './pages/OpportunityDetailPage.jsx';
 import OpportunitiesPage from './pages/OpportunitiesPage.jsx'; // SAREGO-OPP-PAGE-ROUTE
+import InterestManagementPage from './pages/InterestManagementPage.jsx'; // SAREGO-INTEREST-MGMT-ROUTE
 import CommodityRequestFormPage from './pages/CommodityRequestFormPage.jsx';
 import AgriOfftakeFormPage from './pages/AgriOfftakeFormPage.jsx';
 import TenderFormPage from './pages/TenderFormPage.jsx';
@@ -41,6 +42,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/governments" element={<GovernmentsPage />} />
         <Route path="/trade-hub" element={<TradeHubPage />} />
         <Route path="/my-listings" element={<MyListingsPage />} />
+
+        <Route path="/my-listings/:listing_type/:listing_id/interest" element={<InterestManagementPage />} />
 
         {/* Opportunity form routes — static paths declared BEFORE dynamic :type/:id */}
         <Route path="/opportunities/commodity_request/new" element={<CommodityRequestFormPage />} />
