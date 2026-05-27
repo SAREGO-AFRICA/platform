@@ -550,6 +550,7 @@ function CtaRail({
         </div>
 
         {/* SAREGO-CTA-OWNER-FULFILLED */}
+        // SAREGO-CTA-PRIORITY-FIX
         {isOwner ? (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: 'rgba(244, 191, 76, 0.85)' }}>
@@ -566,19 +567,6 @@ function CtaRail({
               Manage Interest{applicantsCount > 0 ? ` (${applicantsCount})` : ''} →
             </Link>
           </div>
-        ) : isFulfilled ? (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: '#7fb069' }}>
-              <strong style={{ fontSize: 14 }}>Opportunity awarded</strong>
-            </div>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, margin: 0 }}>
-              This opportunity has been awarded and is no longer accepting new expressions of interest.
-            </p>
-          </div>
-        ) : isClosed ? (
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, margin: 0 }}>
-            This listing is closed. New interest expressions are not accepted.
-          </p>
         ) : hasInterest ? (
           /* SAREGO-INDICATIVE-MODAL: expanded hasInterest branch */
           <div>
@@ -661,6 +649,15 @@ function CtaRail({
                 Your submission can no longer be edited — the listing owner has progressed your interest.
               </p>
             )}
+          </div>
+        ) : isFulfilled ? (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: '#7fb069' }}>
+              <strong style={{ fontSize: 14 }}>Opportunity awarded</strong>
+            </div>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, margin: 0 }}>
+              This opportunity has been awarded and is no longer accepting new expressions of interest.
+            </p>
           </div>
         ) : (
           <>
