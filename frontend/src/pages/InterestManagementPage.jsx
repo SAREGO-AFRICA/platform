@@ -421,7 +421,8 @@ function InterestCard({ interest, onAction, busy }) {
       )}
 
       {/* Indicative terms (if any — future-proofed for Session I+) */}
-      {(interest.indicative?.amount || interest.indicative?.rate_range || interest.indicative?.tenor) && (
+      {/* SAREGO-CONDITIONS-FIX */}
+      {(interest.indicative?.amount || interest.indicative?.rate_range || interest.indicative?.tenor || interest.indicative?.conditions) && (
         <div style={{
           padding: 12,
           background: 'rgba(192, 132, 252, 0.06)',
@@ -430,13 +431,20 @@ function InterestCard({ interest, onAction, busy }) {
           fontSize: 12,
           color: 'rgba(255,255,255,0.7)',
           marginBottom: 12,
+          lineHeight: 1.6,
         }}>
           <div style={{ fontSize: 10, color: '#c084fc', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>
             Indicative Terms
           </div>
-          {interest.indicative.amount && <div>Amount: ${Number(interest.indicative.amount).toLocaleString()}</div>}
+          {interest.indicative.amount != null && <div>Amount: ${Number(interest.indicative.amount).toLocaleString()}</div>}
           {interest.indicative.rate_range && <div>Rate: {interest.indicative.rate_range}</div>}
           {interest.indicative.tenor && <div>Tenor: {interest.indicative.tenor}</div>}
+          {interest.indicative.conditions && (
+            <div style={{ marginTop: 6 }}>
+              <span style={{ color: 'rgba(255,255,255,0.45)' }}>Conditions: </span>
+              {interest.indicative.conditions}
+            </div>
+          )}
         </div>
       )}
 
