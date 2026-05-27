@@ -769,8 +769,13 @@ router.delete(
 // ============================================================
 // POST /api/opportunities/:type/:id/interest  — express interest
 // ============================================================
+// SAREGO-INDICATIVE-TERMS
 const interestSchema = z.object({
-  message: z.string().max(2000).optional(),
+  message:               z.string().max(2000).optional(),
+  indicative_amount:     z.coerce.number().nonnegative().optional(),
+  indicative_rate_range: z.string().max(120).optional(),
+  indicative_tenor:      z.string().max(120).optional(),
+  conditions:            z.string().max(2000).optional(),
 });
 
 router.post(
@@ -808,10 +813,19 @@ router.post(
 
         const inserted = await client.query(
           `INSERT INTO opportunity_interests
-             (opportunity_type, opportunity_id, user_id, org_id, message, status)
-           VALUES ($1, $2, $3, $4, $5, 'expressed')
-           RETURNING id, status, created_at`,
-          [type, id, req.user.id, orgId, data.message ?? null]
+             (opportunity_type, opportunity_id, user_id, org_id, message,
+              indicative_amount, indicative_rate_range, indicative_tenor, conditions,
+              status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'expressed')
+           RETURNING id, status, created_at,
+                    indicative_amount, indicative_rate_range, indicative_tenor, conditions`,
+          [
+            type, id, req.user.id, orgId, data.message ?? null,
+            data.indicative_amount ?? null,
+            data.indicative_rate_range ?? null,
+            data.indicative_tenor ?? null,
+            data.conditions ?? null,
+          ]
         );
 
         await client.query(
@@ -881,5 +895,58 @@ router.post(
 );
 
 
+
+
+// ============================================================
+// PATCH /api/opportunities/:type/:id/interest
+// Session I: interested party self-edits their indicative terms.
+// Only allowed while status is still 'expressed' (per Q6=b).
+// SAREGO-INDICATIVE-TERMS
+// ============================================================
+router.patch(
+  '/:type/:id/interest',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const type = req.params.type;
+    const id   = req.params.id;
+    const data = interestSchema.parse(req.body || {});
+
+    const existing = await query(
+      `SELECT id, status
+         FROM opportunity_interests
+        WHERE opportunity_type = $1 AND opportunity_id = $2 AND user_id = $3`,
+      [type, id, req.user.id]
+    );
+    if (existing.rowCount === 0) {
+      throw new HttpError(404, 'No interest expressed yet for this opportunity');
+    }
+    if (existing.rows[0].status !== 'expressed') {
+      throw new HttpError(403, 'Interest can only be edited before the owner shortlists');
+    }
+
+    const r = await query(
+      `UPDATE opportunity_interests
+          SET message                = $1,
+              indicative_amount      = $2,
+              indicative_rate_range  = $3,
+              indicative_tenor       = $4,
+              conditions             = $5,
+              updated_at             = now()
+        WHERE opportunity_type = $6 AND opportunity_id = $7 AND user_id = $8
+       RETURNING id, status, message, indicative_amount, indicative_rate_range,
+                 indicative_tenor, conditions, updated_at`,
+      [
+        data.message ?? null,
+        data.indicative_amount ?? null,
+        data.indicative_rate_range ?? null,
+        data.indicative_tenor ?? null,
+        data.conditions ?? null,
+        type, id, req.user.id,
+      ]
+    );
+
+    res.json({ interest: r.rows[0] });
+  })
+);
 
 export default router;
