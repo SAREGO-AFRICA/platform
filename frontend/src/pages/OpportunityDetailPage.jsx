@@ -7,6 +7,8 @@ import {
   Building2, Truck, Package, Sprout, Briefcase, Banknote, AlertCircle, Check, Pencil, Lock,
 } from 'lucide-react';
 import Header from '../components/Header.jsx';
+import ExpressInterestModal from '../components/ExpressInterestModal.jsx'; // SAREGO-INDICATIVE-MODAL
+
 import Footer from '../components/Footer.jsx';
 import { api, getAccessToken } from '../lib/api.js';
 
@@ -87,35 +89,42 @@ export default function OpportunityDetailPage() {
     return () => { cancelled = true; };
   }, [type, id, meta, isLoggedIn]);
 
-  async function handleExpressInterest() {
+  // SAREGO-INDICATIVE-MODAL: modal state + handlers
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
+
+  function handleExpressInterest() {
     if (!isLoggedIn) {
       navigate('/login?next=' + encodeURIComponent(`/opportunities/${type}/${id}`));
       return;
     }
-    setSubmitting(true);
     setSubmitError(null);
-    try {
-      const result = await api(`/api/opportunities/${type}/${id}/interest`, {
-        method: 'POST',
-        body: JSON.stringify({}),
-      });
-      setData((prev) => prev ? {
+    setModalMode('create');
+    setModalOpen(true);
+  }
+
+  function handleEditInterest() {
+    setSubmitError(null);
+    setModalMode('edit');
+    setModalOpen(true);
+  }
+
+  function handleInterestSuccess(result) {
+    // POST returns { interest, applicants_count, already_interested }
+    // PATCH returns { interest }
+    setData((prev) => {
+      if (!prev) return prev;
+      const newUserInterest = result.interest || result; // fallback shape
+      return {
         ...prev,
-        opportunity: { ...prev.opportunity, applicants_count: result.applicants_count },
-        userInterest: result.interest,
-      } : prev);
-      setJustSubmitted(true);
-      setTimeout(() => setJustSubmitted(false), 4000);
-    } catch (err) {
-      const msg = err.message || 'Could not express interest right now.';
-      if (msg.includes('403') || msg.toLowerCase().includes('verified')) {
-        setSubmitError('Verified KYC status is required to express interest. Complete KYC to continue.');
-      } else {
-        setSubmitError(msg);
-      }
-    } finally {
-      setSubmitting(false);
-    }
+        opportunity: result.applicants_count != null
+          ? { ...prev.opportunity, applicants_count: result.applicants_count }
+          : prev.opportunity,
+        userInterest: newUserInterest,
+      };
+    });
+    setJustSubmitted(true);
+    setTimeout(() => setJustSubmitted(false), 4000);
   }
 
   async function handleCloseListing() {
@@ -307,6 +316,7 @@ export default function OpportunityDetailPage() {
                 <CtaRail
                   isLoggedIn={isLoggedIn}
                   userInterest={userInterest}
+                  onEdit={handleEditInterest} /* SAREGO-INDICATIVE-MODAL */
                   opportunityType={type}
                   opportunityId={id}
                   submitting={submitting}
@@ -324,6 +334,17 @@ export default function OpportunityDetailPage() {
       </section>
 
       <Footer />
+
+      {/* SAREGO-INDICATIVE-MODAL */}
+      <ExpressInterestModal
+        open={modalOpen}
+        mode={modalMode}
+        opportunityType={type}
+        opportunityId={id}
+        existingInterest={userInterest}
+        onClose={() => setModalOpen(false)}
+        onSuccess={handleInterestSuccess}
+      />
 
       <style>{`
         @media (max-width: 920px) {
@@ -502,7 +523,8 @@ function VerifiedBadge({ tier }) {
 // ============================================================
 function CtaRail({
   isLoggedIn, userInterest, opportunityType, submitting, submitError,
-  justSubmitted, onSubmit, applicantsCount, expiresLabel, isClosed,
+  justSubmitted, onSubmit, onEdit, /* SAREGO-INDICATIVE-MODAL */
+  applicantsCount, expiresLabel, isClosed,
 }) {
   const hasInterest = !!userInterest;
 
@@ -525,15 +547,87 @@ function CtaRail({
             This listing is closed. New interest expressions are not accepted.
           </p>
         ) : hasInterest ? (
+          /* SAREGO-INDICATIVE-MODAL: expanded hasInterest branch */
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, color: '#7fb069' }}>
               <Check size={20} />
               <strong style={{ fontSize: 14 }}>Interest registered</strong>
             </div>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, margin: 0 }}>
-              You expressed interest on {formatDate(userInterest.created_at)}. The listing owner has been notified
-              and will contact you if your profile matches their requirements.
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, margin: '0 0 14px' }}>
+              You expressed interest on {formatDate(userInterest.created_at)}. The listing owner has been notified.
             </p>
+
+            {/* Inline display of indicative terms if any are present */}
+            {(userInterest.indicative_amount != null
+              || userInterest.indicative_rate_range
+              || userInterest.indicative_tenor
+              || userInterest.conditions
+              || userInterest.message
+            ) && (
+              <div style={{
+                padding: 12,
+                background: 'rgba(244, 191, 76, 0.04)',
+                border: '1px solid rgba(244, 191, 76, 0.15)',
+                borderRadius: 6,
+                marginBottom: 14,
+                fontSize: 12,
+                color: 'rgba(255,255,255,0.75)',
+                lineHeight: 1.6,
+              }}>
+                <div style={{
+                  fontSize: 10,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                  color: 'var(--gold-400, #f4bf4c)',
+                  marginBottom: 8,
+                }}>
+                  Your Submission
+                </div>
+                {userInterest.message && (
+                  <div style={{ marginBottom: 8 }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>Message: </span>
+                    {userInterest.message}
+                  </div>
+                )}
+                {userInterest.indicative_amount != null && (
+                  <div><span style={{ color: 'rgba(255,255,255,0.45)' }}>Amount: </span>${Number(userInterest.indicative_amount).toLocaleString()}</div>
+                )}
+                {userInterest.indicative_rate_range && (
+                  <div><span style={{ color: 'rgba(255,255,255,0.45)' }}>Rate: </span>{userInterest.indicative_rate_range}</div>
+                )}
+                {userInterest.indicative_tenor && (
+                  <div><span style={{ color: 'rgba(255,255,255,0.45)' }}>Tenor: </span>{userInterest.indicative_tenor}</div>
+                )}
+                {userInterest.conditions && (
+                  <div style={{ marginTop: 6 }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>Conditions: </span>
+                    {userInterest.conditions}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Edit terms button — only shown while still 'expressed' */}
+            {userInterest.status === 'expressed' && (
+              <button
+                onClick={onEdit}
+                className="btn btn-ghost-light"
+                style={{ width: '100%', justifyContent: 'center', fontSize: 12, padding: '8px 14px' }}
+              >
+                Edit Submission
+              </button>
+            )}
+            {userInterest.status !== 'expressed' && (
+              <p style={{
+                fontSize: 11,
+                color: 'rgba(255,255,255,0.4)',
+                lineHeight: 1.5,
+                margin: 0,
+                fontStyle: 'italic',
+              }}>
+                Your submission can no longer be edited — the listing owner has progressed your interest.
+              </p>
+            )}
           </div>
         ) : (
           <>
