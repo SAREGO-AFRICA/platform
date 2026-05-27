@@ -317,6 +317,10 @@ export default function OpportunityDetailPage() {
                   isLoggedIn={isLoggedIn}
                   userInterest={userInterest}
                   onEdit={handleEditInterest} /* SAREGO-INDICATIVE-MODAL */
+                  isOwner={isOwner}
+                  isFulfilled={opp.status === 'fulfilled'}
+                  manageInterestHref={`/my-listings/${type}/${id}/interest`}
+                  applicantsCount={opp.applicants_count}
                   opportunityType={type}
                   opportunityId={id}
                   submitting={submitting}
@@ -522,9 +526,12 @@ function VerifiedBadge({ tier }) {
 // CTA rail — non-owner viewer (express interest flow)
 // ============================================================
 function CtaRail({
-  isLoggedIn, userInterest, opportunityType, submitting, submitError,
+  isLoggedIn, userInterest, opportunityType, opportunityType_unused,
+  submitting, submitError,
   justSubmitted, onSubmit, onEdit, /* SAREGO-INDICATIVE-MODAL */
   applicantsCount, expiresLabel, isClosed,
+  // SAREGO-CTA-OWNER-FULFILLED
+  isOwner, isFulfilled, manageInterestHref,
 }) {
   const hasInterest = !!userInterest;
 
@@ -542,7 +549,33 @@ function CtaRail({
           Engage
         </div>
 
-        {isClosed ? (
+        {/* SAREGO-CTA-OWNER-FULFILLED */}
+        {isOwner ? (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: 'rgba(244, 191, 76, 0.85)' }}>
+              <strong style={{ fontSize: 14 }}>You own this listing</strong>
+            </div>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, margin: '0 0 16px' }}>
+              Manage incoming expressions of interest from your dashboard.
+            </p>
+            <Link
+              to={manageInterestHref}
+              className="btn btn-gold"
+              style={{ width: '100%', justifyContent: 'center', textDecoration: 'none' }}
+            >
+              Manage Interest{applicantsCount > 0 ? ` (${applicantsCount})` : ''} →
+            </Link>
+          </div>
+        ) : isFulfilled ? (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: '#7fb069' }}>
+              <strong style={{ fontSize: 14 }}>Opportunity awarded</strong>
+            </div>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55, margin: 0 }}>
+              This opportunity has been awarded and is no longer accepting new expressions of interest.
+            </p>
+          </div>
+        ) : isClosed ? (
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, margin: 0 }}>
             This listing is closed. New interest expressions are not accepted.
           </p>
