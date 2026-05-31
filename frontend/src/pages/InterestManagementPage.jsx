@@ -508,14 +508,22 @@ function InterestCard({ interest, onAction, busy }) {
 // ============================================================
 // Status Summary Tiles
 // ============================================================
-function SummaryTiles({ counts }) {
-  const tiles = [
+// SAREGO-HIDE-ZERO-TILES
+function SummaryTiles({ counts, listingStatus }) {
+  const allTiles = [
     { key: 'expressed',   label: 'Expressed' },
     { key: 'shortlisted', label: 'Shortlisted' },
     { key: 'contacted',   label: 'Contacted' },
     { key: 'declined',    label: 'Declined' },
     { key: 'awarded',     label: 'Awarded' },
   ];
+  // On terminal listings (fulfilled/closed/expired), hide zero-count tiles for cleaner historical view.
+  // On active listings, show all 5 tiles for workflow context.
+  const isTerminal = ['fulfilled', 'closed', 'expired'].includes(listingStatus);
+  const tiles = isTerminal
+    ? allTiles.filter((t) => (counts[t.key] || 0) > 0)
+    : allTiles;
+  if (tiles.length === 0) return null;
   return (
     <div style={{
       display: 'grid',
@@ -758,7 +766,7 @@ export default function InterestManagementPage() {
         )}
 
         {/* Summary tiles */}
-        {!loading && data && <SummaryTiles counts={data.counts || {}} />}
+        {!loading && data && <SummaryTiles counts={data.counts || {}} listingStatus={data.listing?.status} />}
 
         {/* Interest list */}
         {!loading && data?.interests?.length === 0 && (
