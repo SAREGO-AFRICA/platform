@@ -356,12 +356,16 @@ function ListingRow({ listing, type, closingState, onClose }) {
           <Pencil size={13} /> Edit
         </Link>
         {/* SAREGO-MANAGE-INTEREST-BTN */}
+        {/* SAREGO-HISTORICAL-LABEL */}
         <Link
           to={`/my-listings/${type}/${listing.id}/interest`}
           className="btn btn-ghost-light"
           style={{ fontSize: 12, padding: '7px 14px' }}
         >
-          <Users size={13} /> Manage Interest{listing.pending_interest_count > 0 ? ` (${listing.pending_interest_count})` : ''}
+          <Users size={13} />
+          {['fulfilled', 'closed', 'expired'].includes(listing.status)
+            ? ` View Interest History${listing.applicants_count > 0 ? ` (${listing.applicants_count})` : ''}`
+            : ` Manage Interest${listing.pending_interest_count > 0 ? ` (${listing.pending_interest_count})` : ''}`}
         </Link>
         {listing.status === 'published' && (
           <button

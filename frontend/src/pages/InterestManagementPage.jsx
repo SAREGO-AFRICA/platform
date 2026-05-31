@@ -685,8 +685,11 @@ export default function InterestManagementPage() {
         {/* Page header */}
         {!loading && data && (
           <div style={{ marginBottom: 24 }}>
+            {/* SAREGO-HISTORICAL-LABEL */}
             <div style={{ fontSize: 11, color: '#f4bf4c', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>
-              Interest Management · {listingTypeLabel}
+              {['fulfilled', 'closed', 'expired'].includes(data.listing.status)
+                ? 'Interest History'
+                : 'Interest Management'} · {listingTypeLabel}
             </div>
             <h1 style={{
               margin: 0,
