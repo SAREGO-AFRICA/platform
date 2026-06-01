@@ -26,6 +26,8 @@ import MyListingsPage from './pages/MyListingsPage.jsx';
 import KycPage from './pages/KycPage.jsx';
 import DealRoomsListPage from './pages/DealRoomsListPage.jsx';
 import DealRoomPage from './pages/DealRoomPage.jsx';
+import ConversationsPage from './pages/ConversationsPage.jsx';
+import ConversationThreadPage from './pages/ConversationThreadPage.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -65,6 +67,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/projects/new" element={<ProjectFormPage />} />
         <Route path="/projects/:id/edit" element={<ProjectFormPage />} />
         <Route path="/projects/:slug" element={<ProjectDetailPage />} />
+        <Route path="/conversations" element={<ConversationsPage />} />
+        <Route path="/conversations/:id" element={<ConversationThreadPage />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>
