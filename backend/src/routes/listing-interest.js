@@ -188,11 +188,13 @@ router.get(
          o.organization_type AS org_organization_type,
          o.institution_category AS org_institution_category,
          c.iso_code    AS org_country_iso,
-         c.name        AS org_country_name
+         c.name        AS org_country_name,
+         cv.id         AS conversation_id
        FROM opportunity_interests oi
        JOIN users u ON u.id = oi.user_id
        LEFT JOIN organizations o ON o.id = oi.org_id
        LEFT JOIN countries c ON c.id = o.country_id
+       LEFT JOIN conversations cv ON cv.interest_id = oi.id
        WHERE oi.opportunity_type = $1 AND oi.opportunity_id = $2
        ORDER BY
          CASE oi.status
@@ -237,6 +239,7 @@ router.get(
           email: revealContact ? row.user_email : null,
           trust_tier: row.user_trust_tier,
         },
+        conversation_id: row.conversation_id || null,
         organization: row.org_id ? {
           id: row.org_id,
           name: row.org_name,

@@ -501,6 +501,28 @@ function InterestCard({ interest, onAction, busy }) {
           ))}
         </div>
       )}
+
+      {/* View Conversation link — visible once shortlisted */}
+      {interest.conversation_id && (
+        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+          <Link
+            to={`/conversations/${interest.conversation_id}`}
+            style={{
+              fontSize: 13,
+              color: '#b8962e',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 14px',
+              border: '1px solid rgba(184,150,46,0.4)',
+              borderRadius: 6,
+            }}
+          >
+            💬 View Conversation
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
