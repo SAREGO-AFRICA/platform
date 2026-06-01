@@ -17,6 +17,24 @@ export default function Header({ variant = 'light' }) {
     setSignedIn(!!getAccessToken());
   }, [pathname]);
 
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!signedIn) { setUnreadCount(0); return; }
+    const token = getAccessToken();
+    const BASE_URL = import.meta.env.VITE_API_URL || '';
+    fetch(`${BASE_URL}/api/conversations`, {
+      credentials: 'include',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.json())
+      .then(d => {
+        const total = (d.conversations || []).reduce((sum, c) => sum + Number(c.unread_count || 0), 0);
+        setUnreadCount(total);
+      })
+      .catch(() => {});
+  }, [pathname, signedIn]);
+
   async function handleSignOut() {
     try {
       const BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -94,6 +112,12 @@ export default function Header({ variant = 'light' }) {
               <Link to="/dashboard" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
                 {t('header.actions.dashboard')}
               </Link>
+              <Link to="/conversations" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                Conversations
+                {unreadCount > 0 && (
+                  <span style={{ background: '#b8962e', color: '#0d0d0d', borderRadius: 10, padding: '1px 6px', fontSize: 11, fontWeight: 700, lineHeight: 1.4 }}>{unreadCount}</span>
+                )}
+              </Link>
               <button
                 type="button"
                 onClick={handleSignOut}
@@ -165,6 +189,17 @@ export default function Header({ variant = 'light' }) {
                   style={{ flex: 1 }}
                 >
                   {t('header.actions.dashboard')}
+                </Link>
+                <Link
+                  to="/conversations"
+                  onClick={() => setOpen(false)}
+                  className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}
+                  style={{ flex: 1, position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  Conversations
+                  {unreadCount > 0 && (
+                    <span style={{ background: '#b8962e', color: '#0d0d0d', borderRadius: 10, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{unreadCount}</span>
+                  )}
                 </Link>
                 <button
                   type="button"
