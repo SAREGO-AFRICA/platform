@@ -349,6 +349,17 @@ router.patch(
           };
           if (body.status === 'shortlisted') {
             email.interestShortlisted(templateInput);
+            // Auto-create conversation thread (B2: auto-create on shortlist)
+            try {
+              await query(
+                `INSERT INTO conversations (listing_type, listing_id, owner_user_id, party_user_id, interest_id)
+                 VALUES ($1, $2, $3, (SELECT user_id FROM opportunity_interests WHERE id = $4), $4)
+                 ON CONFLICT (listing_type, listing_id, party_user_id) DO NOTHING`,
+                [listing_type, listing_id, ownerId, interest_id]
+              );
+            } catch (convErr) {
+              console.warn('[conversation] auto-create failed:', convErr?.message);
+            }
           } else if (body.status === 'declined') {
             email.interestDeclined(templateInput);
           }
