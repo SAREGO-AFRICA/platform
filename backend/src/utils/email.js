@@ -386,6 +386,31 @@ export function sendInterestAwardedEmail({ to, partyName, ownerOrgName, listingT
   return send({ to, subject: t.subject, html: t.html, text: t.text });
 }
 
+export function sendConversationOpenedEmail({ to, partyName, ownerOrgName, listingTitle, listingType, listingId, listingTypeLabel, conversationId }) {
+  const platformUrl = process.env.PLATFORM_URL || 'https://sarego.africa';
+  const threadUrl = `${platformUrl}/conversations/${conversationId}`;
+  return fireAndForget(send({
+    to,
+    subject: `A conversation has been opened regarding ${listingTitle}`,
+    html: `
+      <p>Dear ${partyName},</p>
+      <p>
+        <strong>${ownerOrgName || 'The listing owner'}</strong> has opened a private conversation
+        with you regarding the ${listingTypeLabel} listing <strong>${listingTitle}</strong>.
+      </p>
+      <p>You may now exchange messages and documents directly through the SAREGO platform.</p>
+      <p style="margin: 24px 0;">
+        <a href="${threadUrl}" style="background:#b8962e;color:#fff;padding:12px 24px;border-radius:4px;text-decoration:none;font-weight:600;">
+          View Conversation
+        </a>
+      </p>
+      <p style="color:#666;font-size:13px;">
+        This message was sent by SAREGO. Do not reply directly to this email.
+      </p>
+    `,
+  }));
+}
+
 export const email = {
   welcome: (args) => fireAndForget(sendWelcomeEmail(args)),
   kycSubmitted: (args) => fireAndForget(sendKycSubmittedNotifyAdmins(args)),
@@ -399,6 +424,7 @@ export const email = {
   interestShortlisted: (args) => fireAndForget(sendInterestShortlistedEmail(args)),
   interestDeclined:    (args) => fireAndForget(sendInterestDeclinedEmail(args)),
   interestAwarded:     (args) => fireAndForget(sendInterestAwardedEmail(args)),
+  conversationOpened:  (args) => sendConversationOpenedEmail(args),
 };
 
 // ---------- Utilities ----------
