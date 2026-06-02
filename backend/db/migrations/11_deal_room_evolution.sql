@@ -1,0 +1,4 @@
+-- Migration 11: Deal Room Evolution (Session K)
+-- Adds: status, deal value, milestones, discussion threads, thread messages
+-- Run date: 2026-06-02
+-- Applied manually via Supabase SQL Editor
