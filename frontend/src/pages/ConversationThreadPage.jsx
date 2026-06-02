@@ -21,10 +21,32 @@ export default function ConversationThreadPage() {
   const H = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
-    fetch(`${API}/api/conversations/${id}`, { credentials: 'include', headers: H })
-      .then(r => r.json())
-      .then(d => { setConv(d.conversation); setMessages(d.messages || []); setLoading(false); fetch(`${API}/api/conversations/${id}/seen`, { method: 'PATCH', credentials: 'include', headers: H }); })
-      .catch(() => setLoading(false));
+    let attempts = 0;
+    function loadConversation() {
+      const token = localStorage.getItem('sarego_access');
+      const headers = { Authorization: `Bearer ${token}` };
+      fetch(`${API}/api/conversations/${id}`, { credentials: 'include', headers })
+        .then(r => r.json())
+        .then(d => {
+          if (!d.conversation && attempts < 3) {
+            // Token may not be ready yet — retry after 800ms
+            attempts++;
+            setTimeout(loadConversation, 800);
+            return;
+          }
+          setConv(d.conversation);
+          setMessages(d.messages || []);
+          setLoading(false);
+          if (d.conversation) {
+            fetch(`${API}/api/conversations/${id}/seen`, { method: 'PATCH', credentials: 'include', headers });
+          }
+        })
+        .catch(() => {
+          if (attempts < 3) { attempts++; setTimeout(loadConversation, 800); }
+          else setLoading(false);
+        });
+    }
+    loadConversation();
   }, [id]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
