@@ -19,7 +19,7 @@ export default function ConversationsPage() {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('sarego_access');
   const currentUserId = (() => { try { return JSON.parse(atob(token?.split('.')[1] || '')).sub; } catch { return null; } })();
 
   useEffect(() => {

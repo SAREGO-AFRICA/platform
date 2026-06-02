@@ -16,7 +16,7 @@ export default function ConversationThreadPage() {
   const [fileError, setFileError] = useState(null);
   const [sendError, setSendError] = useState(null);
   const bottomRef = useRef(null);
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('sarego_access');
   const currentUserId = (() => { try { return JSON.parse(atob(token?.split('.')[1] || '')).sub; } catch { return null; } })();
   const H = { Authorization: `Bearer ${token}` };
 
