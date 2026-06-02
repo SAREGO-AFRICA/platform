@@ -24,7 +24,7 @@ const s = {
   hdr:  { background:'rgba(11,13,16,0.95)', borderBottom:'1px solid rgba(184,150,46,0.2)', padding:'20px 32px', display:'flex', alignItems:'center', gap:16, backdropFilter:'blur(12px)' },
   back: { color:'#b8962e', textDecoration:'none', display:'flex', alignItems:'center', gap:4, fontSize:14, opacity:0.8 },
   title:{ fontSize:24, fontWeight:700, color:'#e8e0d0', margin:0, letterSpacing:'-0.01em' },
-  sub:  { fontSize:13, color:'rgba(232,224,208,0.5)', marginTop:3 },
+  sub:  { fontSize:13, color:'rgba(232,224,208,0.75)', marginTop:3 },
   badge:(c)=>({ display:'inline-block', padding:'3px 12px', borderRadius:20, fontSize:11, fontWeight:700, color:c, border:`1px solid ${c}`, background:c+'18', letterSpacing:'0.06em' }),
   tabs: { display:'flex', borderBottom:'1px solid rgba(184,150,46,0.15)', background:'rgba(15,17,20,0.8)', padding:'0 32px', backdropFilter:'blur(8px)' },
   tab:  (a)=>({ padding:'16px 22px', fontSize:12, fontWeight:a?600:400, color:a?'#b8962e':'rgba(232,224,208,0.45)', borderBottom:a?'2px solid #b8962e':'2px solid transparent', cursor:'pointer', background:'none', border:'none', borderBottom:a?'2px solid #b8962e':'2px solid transparent', letterSpacing:'0.06em', textTransform:'uppercase' }),
@@ -73,8 +73,8 @@ export default function DealRoomPage() {
   const completedCount = milestones.filter(m => m.status === 'completed').length;
   const currentMS = milestones.find(m => m.status === 'active') || milestones.find(m => m.status === 'pending');
 
-  if (loading) return <div style={s.page}><div style={{padding:64,textAlign:'center',color:'#888'}}>Loading...</div></div>;
-  if (!room)   return <div style={s.page}><div style={{padding:64,textAlign:'center',color:'#888'}}>Room not found.</div></div>;
+  if (loading) return <div style={s.page}><div style={{padding:64,textAlign:'center',color:'#b0a898'}}>Loading...</div></div>;
+  if (!room)   return <div style={s.page}><div style={{padding:64,textAlign:'center',color:'#b0a898'}}>Room not found.</div></div>;
 
   return (
     <div style={s.page}>
@@ -192,14 +192,14 @@ function MilestonesTab({ roomId, milestones, canEdit, onRefresh }) {
             <div style={{flex:1,paddingTop:2}}>
               <div style={{display:'flex',alignItems:'center',gap:10}}>
                 <span style={{fontWeight:m.status==='active'?700:500,fontSize:14,color:m.status==='pending'?'rgba(232,224,208,0.35)':'#e8e0d0'}}>{m.label}</span>
-                {m.status==='completed'&&m.completed_at&&<span style={{fontSize:11,color:'#888'}}>{fmt(m.completed_at)}</span>}
+                {m.status==='completed'&&m.completed_at&&<span style={{fontSize:11,color:'#b0a898'}}>{fmt(m.completed_at)}</span>}
                 {canEdit&&m.status!=='completed'&&m.status!=='skipped'&&(
                   <button style={{...s.btn,padding:'3px 10px',fontSize:11,marginLeft:'auto'}} onClick={()=>advance(m.sequence,m.status)} disabled={busy===m.sequence}>
                     {m.status==='pending'?'Start':'Complete'}
                   </button>
                 )}
               </div>
-              {m.notes&&<div style={{fontSize:12,color:'#666',marginTop:4}}>{m.notes}</div>}
+              {m.notes&&<div style={{fontSize:12,color:'#9a9080',marginTop:4}}>{m.notes}</div>}
             </div>
           </div>
         );
@@ -256,25 +256,25 @@ function DiscussionTab({ roomId, threads, me, canEdit, onRefresh }) {
         {threads.map(t=>(
           <div key={t.id} onClick={()=>loadThread(t)} style={{padding:'10px 12px',borderRadius:8,cursor:'pointer',background:active?.id===t.id?'#fef3cd':'#fff',border:`1px solid ${active?.id===t.id?'#b8962e':'#e5e7eb'}`,marginBottom:6}}>
             <div style={{fontSize:13,fontWeight:500,color:'#e8e0d0'}}>{t.title}</div>
-            <div style={{fontSize:11,color:'#888',marginTop:2}}>{t.is_default?'Default':'Custom'} · {t.message_count||0} msgs</div>
+            <div style={{fontSize:11,color:'#b0a898',marginTop:2}}>{t.is_default?'Default':'Custom'} · {t.message_count||0} msgs</div>
           </div>
         ))}
       </div>
       <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(184,150,46,0.15)',borderRadius:12,display:'flex',flexDirection:'column'}}>
         {!active?(
-          <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#888',fontSize:14,padding:40}}>Select a thread to view messages</div>
+          <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#b0a898',fontSize:14,padding:40}}>Select a thread to view messages</div>
         ):(
           <>
             <div style={{padding:'14px 20px',borderBottom:'1px solid rgba(184,150,46,0.15)',fontWeight:600,fontSize:15,color:'#b8962e',letterSpacing:'0.04em'}}>{active.title}</div>
             <div style={{flex:1,overflowY:'auto',padding:20,display:'flex',flexDirection:'column',gap:12,minHeight:300,maxHeight:400}}>
-              {messages.length===0&&<div style={{color:'#888',fontSize:13,textAlign:'center',padding:32}}>No messages yet.</div>}
+              {messages.length===0&&<div style={{color:'#b0a898',fontSize:13,textAlign:'center',padding:32}}>No messages yet.</div>}
               {messages.map(msg=>{
                 const isMe=msg.sender_id===me;
                 return(
                   <div key={msg.id} style={{alignSelf:isMe?'flex-end':'flex-start',maxWidth:'70%',background:isMe?'#fef3cd':'#f9fafb',border:`1px solid ${isMe?'#b8962e44':'#e5e7eb'}`,borderRadius:isMe?'12px 12px 4px 12px':'12px 12px 12px 4px',padding:'10px 14px'}}>
-                    <div style={{fontSize:11,color:'#888',marginBottom:4}}>{isMe?'You':msg.sender_name}</div>
+                    <div style={{fontSize:11,color:'#b0a898',marginBottom:4}}>{isMe?'You':msg.sender_name}</div>
                     <div style={{fontSize:14,color:'#e8e0d0',lineHeight:1.5}}>{msg.body}</div>
-                    <div style={{fontSize:11,color:'#aaa',marginTop:4,textAlign:'right'}}>{fmtTime(msg.created_at)}</div>
+                    <div style={{fontSize:11,color:'#c0b8a8',marginTop:4,textAlign:'right'}}>{fmtTime(msg.created_at)}</div>
                   </div>
                 );
               })}
@@ -326,13 +326,13 @@ function DocumentsTab({ roomId, docs, me, isOwner, canEdit, onRefresh }) {
         )}
       </div>
       {err&&<div style={s.err}>{err}</div>}
-      {docs.length===0&&<div style={{color:'#888',fontSize:14,textAlign:'center',padding:32}}>No documents yet.</div>}
+      {docs.length===0&&<div style={{color:'#b0a898',fontSize:14,textAlign:'center',padding:32}}>No documents yet.</div>}
       {docs.map(doc=>(
         <div key={doc.id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderBottom:'1px solid rgba(184,150,46,0.1)'}}>
           <FileText size={18} color="#b8962e"/>
           <div style={{flex:1}}>
             <div style={{fontSize:14,fontWeight:500}}>{doc.title||doc.filename}</div>
-            <div style={{fontSize:12,color:'#888'}}>{doc.file_size_bytes?Math.round(doc.file_size_bytes/1024)+' KB':''} · {fmt(doc.created_at)}</div>
+            <div style={{fontSize:12,color:'#b0a898'}}>{doc.file_size_bytes?Math.round(doc.file_size_bytes/1024)+' KB':''} · {fmt(doc.created_at)}</div>
           </div>
           <button style={{...s.btnG,padding:'5px 12px',fontSize:12}} onClick={()=>handleView(doc.id)}>↗ View</button>
           {(isOwner||doc.uploaded_by===me)&&<button style={{background:'transparent',border:'none',cursor:'pointer',color:'#ef4444'}} onClick={()=>handleDelete(doc.id,doc.title||doc.filename)}><Trash2 size={14}/></button>}
@@ -388,7 +388,7 @@ function MembersTab({ roomId, members, isOwner, onRefresh }) {
           </div>
           <div style={{flex:1}}>
             <div style={{fontSize:14,fontWeight:500}}>{m.full_name}</div>
-            <div style={{fontSize:12,color:'#888'}}>{m.email}</div>
+            <div style={{fontSize:12,color:'#b0a898'}}>{m.email}</div>
           </div>
           <span style={{fontSize:11,fontWeight:700,color:ROLE_COLOR[m.room_role]||'#888',border:`1px solid ${ROLE_COLOR[m.room_role]||'#888'}`,padding:'2px 8px',borderRadius:4,textTransform:'uppercase'}}>{m.room_role}</span>
           {isOwner&&m.room_role!=='owner'&&<button style={{background:'transparent',border:'none',cursor:'pointer',color:'#ef4444'}} onClick={()=>handleRemove(m.user_id,m.full_name)}><Trash2 size={14}/></button>}
@@ -407,14 +407,14 @@ function ActivityTab({ activity }) {
   return (
     <div style={s.card}>
       <h3 style={{margin:'0 0 20px',fontSize:16,fontWeight:600}}>Activity Timeline</h3>
-      {activity.length===0&&<div style={{color:'#888',fontSize:14,textAlign:'center',padding:32}}>No activity yet.</div>}
+      {activity.length===0&&<div style={{color:'#b0a898',fontSize:14,textAlign:'center',padding:32}}>No activity yet.</div>}
       {activity.map((a,i)=>(
         <div key={a.id||i} style={{display:'flex',gap:12,paddingBottom:16,borderBottom:i<activity.length-1?'1px solid rgba(184,150,46,0.1)':'none',marginBottom:4}}>
           <div style={{width:8,height:8,borderRadius:'50%',background:'#b8962e',flexShrink:0,marginTop:6}}/>
           <div>
             <span style={{fontSize:14,fontWeight:500}}>{a.user_name||'A user'}</span>
-            <span style={{fontSize:14,color:'#555'}}> {ACTION_LABEL[a.action]||a.action}</span>
-            <div style={{fontSize:12,color:'#888',marginTop:2}}>{fmtTime(a.created_at)}</div>
+            <span style={{fontSize:14,color:'#a09080'}}> {ACTION_LABEL[a.action]||a.action}</span>
+            <div style={{fontSize:12,color:'#b0a898',marginTop:2}}>{fmtTime(a.created_at)}</div>
           </div>
         </div>
       ))}
