@@ -8,6 +8,7 @@ import { getAccessToken, setAccessToken } from '../lib/api.js';
 export default function Header({ variant = 'light' }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -122,39 +123,108 @@ export default function Header({ variant = 'light' }) {
         <div className="flex items-center gap-3" data-desktop-actions>
           {signedIn ? (
             <>
-              <Link to="/dashboard" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
-                {t('header.actions.dashboard')}
-              </Link>
-              <Link to="/my-listings" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
-                My Listings
-              </Link>
-              <Link to="/deal-rooms" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
-                Deal Rooms
-              </Link>
-              {showProviderProfile && (
-                <Link to="/my-provider-profile" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
-                  Provider Profile
-                </Link>
-              )}
-              {showKyc && (
-                <Link to="/kyc" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
-                  KYC
-                </Link>
-              )}
-              <Link to="/conversations" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                Conversations
-                {unreadCount > 0 && (
-                  <span style={{ background: '#b8962e', color: '#0d0d0d', borderRadius: 10, padding: '1px 6px', fontSize: 11, fontWeight: 700, lineHeight: 1.4 }}>{unreadCount}</span>
+              {/* Account dropdown trigger */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(p => !p)}
+                  className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  Account
+                  {unreadCount > 0 && (
+                    <span style={{ background: '#b8962e', color: '#0d0d0d', borderRadius: 10, padding: '1px 6px', fontSize: 11, fontWeight: 700, lineHeight: 1.4 }}>{unreadCount}</span>
+                  )}
+                  <span style={{ fontSize: 10, opacity: 0.6 }}>▾</span>
+                </button>
+
+                {menuOpen && (
+                  <>
+                    {/* Backdrop */}
+                    <div
+                      style={{ position: 'fixed', inset: 0, zIndex: 98 }}
+                      onClick={() => setMenuOpen(false)}
+                    />
+                    {/* Dropdown panel */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 10px)',
+                      right: 0,
+                      zIndex: 99,
+                      background: isDark ? '#0f1114' : '#fff',
+                      border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                      borderRadius: 12,
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                      padding: '20px',
+                      width: 280,
+                    }}>
+                      {/* Grid of links */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+                        {[
+                          { to: '/dashboard', icon: '⊞', label: 'Dashboard' },
+                          { to: '/my-listings', icon: '📋', label: 'My Listings' },
+                          { to: '/conversations', icon: '💬', label: 'Conversations', badge: unreadCount },
+                          { to: '/deal-rooms', icon: '🔒', label: 'Deal Rooms' },
+                          ...(showProviderProfile ? [{ to: '/my-provider-profile', icon: '🏦', label: 'Provider Profile' }] : []),
+                          ...(showKyc ? [{ to: '/kyc', icon: '✓', label: 'KYC Verification' }] : []),
+                        ].map(item => (
+                          <Link
+                            key={item.to}
+                            to={item.to}
+                            onClick={() => setMenuOpen(false)}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: '14px 8px',
+                              borderRadius: 8,
+                              background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                              border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                              textDecoration: 'none',
+                              color: isDark ? '#e8e0d0' : '#1a1a1a',
+                              fontSize: 12,
+                              fontWeight: 500,
+                              transition: 'background 0.15s',
+                              position: 'relative',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(184,150,46,0.12)' : 'rgba(184,150,46,0.08)'}
+                            onMouseLeave={e => e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'}
+                          >
+                            <span style={{ fontSize: 20 }}>{item.icon}</span>
+                            <span>{item.label}</span>
+                            {item.badge > 0 && (
+                              <span style={{ position: 'absolute', top: 8, right: 8, background: '#b8962e', color: '#0d0d0d', borderRadius: 10, padding: '1px 5px', fontSize: 10, fontWeight: 700 }}>{item.badge}</span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                      {/* Sign out */}
+                      <button
+                        type="button"
+                        onClick={() => { setMenuOpen(false); handleSignOut(); }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          padding: '10px',
+                          borderRadius: 8,
+                          border: '1px solid rgba(184,150,46,0.3)',
+                          background: 'transparent',
+                          color: '#b8962e',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <LogOut size={14} /> Sign Out
+                      </button>
+                    </div>
+                  </>
                 )}
-              </Link>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="btn btn-gold"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >
-                <LogOut size={14} /> {t('header.actions.signOut')}
-              </button>
+              </div>
             </>
           ) : (
             <>
