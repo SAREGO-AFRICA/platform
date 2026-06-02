@@ -19,6 +19,18 @@ export default function Header({ variant = 'light' }) {
 
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Parse role and tier from JWT for conditional nav
+  const { userRole, userTier } = (() => {
+    try {
+      const token = getAccessToken();
+      if (!token) return { userRole: null, userTier: null };
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return { userRole: payload.role, userTier: payload.tier };
+    } catch { return { userRole: null, userTier: null }; }
+  })();
+  const showKyc = signedIn && userTier !== 'verified';
+  const showProviderProfile = signedIn && ['investor', 'corporate', 'sme'].includes(userRole);
+
   useEffect(() => {
     if (!signedIn) { setUnreadCount(0); return; }
     const token = getAccessToken();
@@ -119,12 +131,16 @@ export default function Header({ variant = 'light' }) {
               <Link to="/deal-rooms" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
                 Deal Rooms
               </Link>
-              <Link to="/my-provider-profile" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
-                Provider Profile
-              </Link>
-              <Link to="/kyc" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
-                KYC
-              </Link>
+              {showProviderProfile && (
+                <Link to="/my-provider-profile" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
+                  Provider Profile
+                </Link>
+              )}
+              {showKyc && (
+                <Link to="/kyc" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
+                  KYC
+                </Link>
+              )}
               <Link to="/conversations" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 Conversations
                 {unreadCount > 0 && (
