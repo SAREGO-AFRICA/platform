@@ -16,6 +16,7 @@ export default function Header({ variant = 'light' }) {
 
   useEffect(() => {
     setSignedIn(!!getAccessToken());
+    setMenuOpen(false);
   }, [pathname]);
 
   const [unreadCount, setUnreadCount] = useState(0);
@@ -29,7 +30,7 @@ export default function Header({ variant = 'light' }) {
       return { userRole: payload.role, userTier: payload.tier };
     } catch { return { userRole: null, userTier: null }; }
   })();
-  const showKyc = signedIn && userTier !== 'verified';
+  const showKyc = signedIn && userTier !== 'verified' && userRole !== 'admin';
   const showProviderProfile = signedIn && ['investor', 'corporate', 'sme'].includes(userRole);
 
   useEffect(() => {
