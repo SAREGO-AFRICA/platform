@@ -80,7 +80,7 @@ export default function Header({ variant = 'light' }) {
       style={{
         position: 'sticky',
         top: 0,
-        zIndex: 50,
+        zIndex: 100,
         background: isDark
           ? 'rgba(11, 13, 16, 0.85)'
           : 'rgba(250, 246, 238, 0.88)',
@@ -143,7 +143,7 @@ export default function Header({ variant = 'light' }) {
                   <>
                     {/* Backdrop */}
                     <div
-                      style={{ position: 'fixed', inset: 0, zIndex: 98 }}
+                      style={{ position: 'fixed', inset: 0, zIndex: 98, cursor: 'default' }}
                       onClick={() => setMenuOpen(false)}
                     />
                     {/* Dropdown panel */}
