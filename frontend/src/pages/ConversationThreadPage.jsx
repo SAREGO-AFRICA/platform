@@ -29,6 +29,30 @@ export default function ConversationThreadPage() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
+  // Poll for new messages every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const r = await fetch(`${API}/api/conversations/${id}`, {
+          credentials: 'include',
+          headers: H,
+        });
+        const d = await r.json();
+        if (d.messages && d.messages.length > 0) {
+          setMessages(prev => {
+            const existingIds = new Set(prev.map(m => m.id));
+            const newMsgs = d.messages.filter(m => !existingIds.has(m.id));
+            if (newMsgs.length === 0) return prev;
+            // Mark seen if new messages from other party
+            fetch(`${API}/api/conversations/${id}/seen`, { method: 'PATCH', credentials: 'include', headers: H });
+            return [...prev, ...newMsgs];
+          });
+        }
+      } catch { /* silent */ }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [id]);
+
   function handleFileChange(e) {
     const f = e.target.files[0]; setFileError(null);
     if (!f) { setFile(null); return; }

@@ -29,6 +29,20 @@ export default function ConversationsPage() {
       .catch(() => { setError('Failed to load conversations'); setLoading(false); });
   }, []);
 
+  // Poll for updates every 15 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch(`${API}/api/conversations`, {
+        credentials: 'include',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.json())
+        .then(d => { if (d.conversations) setConversations(d.conversations); })
+        .catch(() => {});
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   const s = {
     page: { minHeight: '100vh', background: '#0d0d0d', color: '#e8e0d0', fontFamily: "'Inter Tight', sans-serif", padding: '32px 24px' },
     header: { maxWidth: 720, margin: '0 auto 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
