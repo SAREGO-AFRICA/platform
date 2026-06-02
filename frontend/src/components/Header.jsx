@@ -54,6 +54,7 @@ export default function Header({ variant = 'light' }) {
   const links = [
     // SAREGO-OPP-PAGE-NAV
     { href: '/opportunities', label: t('header.nav.opportunities') },
+    { href: '/provider/browse', label: 'Capital Providers' },
     { href: '/#marketplace',  label: t('header.nav.marketplace') },
     { href: '/trade-hub',     label: t('header.nav.tradeHub') },
     { href: '/governments',   label: t('header.nav.forGovernments') },
@@ -111,6 +112,18 @@ export default function Header({ variant = 'light' }) {
             <>
               <Link to="/dashboard" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
                 {t('header.actions.dashboard')}
+              </Link>
+              <Link to="/my-listings" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
+                My Listings
+              </Link>
+              <Link to="/deal-rooms" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
+                Deal Rooms
+              </Link>
+              <Link to="/my-provider-profile" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
+                Provider Profile
+              </Link>
+              <Link to="/kyc" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`}>
+                KYC
               </Link>
               <Link to="/conversations" className={`btn ${isDark ? 'btn-ghost-light' : 'btn-ghost'}`} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 Conversations
