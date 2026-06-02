@@ -179,6 +179,30 @@ router.post(
       [interest.id]
     );
 
+    // Seed default milestones
+    const milestoneLabels = [
+      'Initial Interest', 'Shortlisted', 'NDA / Confidentiality Accepted',
+      'Documents Submitted', 'Due Diligence', 'Commercial Review',
+      'Final Approval', 'Awarded', 'Closed'
+    ];
+    for (let i = 0; i < milestoneLabels.length; i++) {
+      await query(
+        `INSERT INTO deal_room_milestones (deal_room_id, sequence, label, status)
+         VALUES ($1, $2, $3, $4)`,
+        [room.id, i + 1, milestoneLabels[i], i === 0 ? 'completed' : 'pending']
+      );
+    }
+
+    // Seed default discussion threads
+    const defaultThreads = ['Due Diligence', 'Commercial Terms', 'Legal & Compliance', 'Technical Review'];
+    for (const title of defaultThreads) {
+      await query(
+        `INSERT INTO deal_room_threads (deal_room_id, title, is_default, created_by)
+         VALUES ($1, $2, true, $3)`,
+        [room.id, title, req.user.id]
+      );
+    }
+
     await logAccess({
       roomId: room.id,
       userId: req.user.id,
@@ -608,7 +632,7 @@ router.get(
         LIMIT 100`,
       [room.id]
     );
-    res.json({ activity: r.rows });
+    res.json({ log: r.rows, activity: r.rows });
   })
 );
 
