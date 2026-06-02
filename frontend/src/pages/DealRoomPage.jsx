@@ -1,677 +1,423 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import {
-  ArrowLeft,
-  ArrowUpRight,
-  Lock,
-  Upload,
-  FileText,
-  UserPlus,
-  Trash2,
-  Loader2,
-  Activity,
-  Users,
-  X,
-} from 'lucide-react';
-import Header from '../components/Header.jsx';
-import Footer from '../components/Footer.jsx';
-import { api, getAccessToken } from '../lib/api.js';
+import { ArrowLeft, FileText, Trash2 } from 'lucide-react';
+import { api, getAccessToken } from '../lib/api';
 
-const MAX_FILE_BYTES = 50 * 1024 * 1024;
-const ALLOWED_MIME = [
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/vnd.ms-powerpoint',
-  'application/zip',
-  'application/x-zip-compressed',
-];
-const BASE_URL = import.meta.env.VITE_API_URL || '';
-
-const ROLE_BADGE = {
-  owner: { label: 'Owner', color: 'var(--gold-700)' },
-  editor: { label: 'Editor', color: 'var(--sage-700)' },
-  viewer: { label: 'Viewer', color: 'var(--fg-muted)' },
+const TABS = ['Overview', 'Milestones', 'Discussion', 'Documents', 'Members', 'Activity'];
+const STATUS_META = {
+  active:    { label: 'Active',    color: '#22c55e' },
+  on_hold:   { label: 'On Hold',   color: '#f59e0b' },
+  cancelled: { label: 'Cancelled', color: '#ef4444' },
+  completed: { label: 'Completed', color: '#6366f1' },
 };
-
-const ACTION_LABEL = {
-  create: 'opened the room',
-  invite: 'invited a member',
-  remove: 'removed a member',
-  upload: 'uploaded',
-  view: 'viewed',
-  delete: 'deleted',
+const MILESTONE_STATUS = {
+  completed: { icon: '✓', color: '#22c55e' },
+  active:    { icon: '◉', color: '#b8962e' },
+  pending:   { icon: '○', color: '#aaa' },
+  skipped:   { icon: '—', color: '#666' },
 };
-
-function formatBytes(bytes) {
-  if (!bytes && bytes !== 0) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function timeAgo(dateStr) {
-  const d = new Date(dateStr);
-  const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return d.toLocaleDateString();
-}
-
+function uid() { try { return JSON.parse(atob(getAccessToken().split('.')[1])).sub; } catch { return null; } }
+function fmt(d) { return d ? new Date(d).toLocaleDateString(undefined,{dateStyle:'medium'}) : '—'; }
+function fmtTime(d) { return d ? new Date(d).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}) : '—'; }
+const s = {
+  page: { minHeight:'100vh', background:'#faf6ee', fontFamily:"'Inter Tight', sans-serif" },
+  hdr:  { background:'#fff', borderBottom:'1px solid #e5e7eb', padding:'16px 32px', display:'flex', alignItems:'center', gap:16 },
+  back: { color:'#b8962e', textDecoration:'none', display:'flex', alignItems:'center', gap:4, fontSize:14 },
+  title:{ fontSize:22, fontWeight:700, color:'#111', margin:0 },
+  sub:  { fontSize:13, color:'#888', marginTop:2 },
+  badge:(c)=>({ display:'inline-block', padding:'2px 10px', borderRadius:12, fontSize:11, fontWeight:700, color:c, border:`1px solid ${c}`, background:c+'18' }),
+  tabs: { display:'flex', borderBottom:'1px solid #e5e7eb', background:'#fff', padding:'0 32px' },
+  tab:  (a)=>({ padding:'14px 20px', fontSize:13, fontWeight:a?600:400, color:a?'#b8962e':'#666', borderBottom:a?'2px solid #b8962e':'2px solid transparent', cursor:'pointer', background:'none', border:'none', borderBottom:a?'2px solid #b8962e':'2px solid transparent' }),
+  body: { padding:'32px', maxWidth:960, margin:'0 auto' },
+  card: { background:'#fff', border:'1px solid #e5e7eb', borderRadius:12, padding:24, marginBottom:16 },
+  lbl:  { fontSize:11, color:'#888', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 },
+  val:  { fontSize:15, fontWeight:500, color:'#111' },
+  btn:  { background:'#b8962e', color:'#fff', border:'none', borderRadius:6, padding:'8px 18px', fontWeight:600, fontSize:13, cursor:'pointer' },
+  btnG: { background:'transparent', color:'#b8962e', border:'1px solid #b8962e', borderRadius:6, padding:'8px 18px', fontWeight:600, fontSize:13, cursor:'pointer' },
+  inp:  { width:'100%', padding:'10px 12px', border:'1px solid #e5e7eb', borderRadius:8, fontSize:14, boxSizing:'border-box', fontFamily:'inherit' },
+  ta:   { width:'100%', padding:'10px 12px', border:'1px solid #e5e7eb', borderRadius:8, fontSize:14, resize:'vertical', minHeight:80, fontFamily:'inherit', boxSizing:'border-box' },
+  err:  { color:'#ef4444', fontSize:13, marginTop:6 },
+};
 export default function DealRoomPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [room, setRoom] = useState(null);
-  const [myRole, setMyRole] = useState('viewer');
   const [members, setMembers] = useState([]);
-  const [documents, setDocuments] = useState([]);
+  const [milestones, setMilestones] = useState([]);
+  const [threads, setThreads] = useState([]);
   const [activity, setActivity] = useState([]);
-  const [activityOpen, setActivityOpen] = useState(false);
+  const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!getAccessToken()) {
-      navigate('/login');
-      return;
-    }
-    load();
-  }, [id, navigate]);
+  const [tab, setTab] = useState('Overview');
+  const me = uid();
 
   async function load() {
     try {
-      setLoading(true);
-      setError(null);
-      const data = await api(`/api/deal-rooms/${id}`);
-      setRoom(data.room);
-      setMyRole(data.my_role);
-      setMembers(data.members || []);
-      setDocuments(data.documents || []);
-    } catch (err) {
-      setError(err.message || 'Failed to load deal room.');
-    } finally {
-      setLoading(false);
-    }
+      const d = await api(/api/deal-rooms/+id);
+      setRoom(d.room || d);
+      setMembers(d.members || []);
+      setDocs(d.documents || []);
+    } catch { navigate('/login'); return; }
+    try { const d = await api(/api/deal-rooms/+id+/milestones); setMilestones(d.milestones||[]); } catch {}
+    try { const d = await api(/api/deal-rooms/+id+/threads);    setThreads(d.threads||[]);    } catch {}
+    try { const d = await api(/api/deal-rooms/+id+/activity);   setActivity(d.log||[]);       } catch {}
+    setLoading(false);
   }
 
-  async function loadActivity() {
-    try {
-      const data = await api(`/api/deal-rooms/${id}/activity`);
-      setActivity(data.activity || []);
-    } catch (err) {
-      console.warn('Failed to load activity', err);
-    }
-  }
+  useEffect(() => { load(); }, [id]);
 
-  function toggleActivity() {
-    const next = !activityOpen;
-    setActivityOpen(next);
-    if (next && activity.length === 0) loadActivity();
-  }
+  const isOwner = room?.created_by === me;
+  const myRole  = members.find(m => m.user_id === me)?.room_role;
+  const canEdit = isOwner || myRole === 'editor';
+  const dealValue = room?.deal_value_override ?? room?.deal_value_source;
+  const completedCount = milestones.filter(m => m.status === 'completed').length;
+  const currentMS = milestones.find(m => m.status === 'active') || milestones.find(m => m.status === 'pending');
 
-  if (loading) {
-    return (
-      <>
-        <Header />
-        <main style={{ maxWidth: 1020, margin: '0 auto', padding: '40px 24px' }}>
-          <p style={{ color: 'var(--fg-muted)' }}>Loading...</p>
-        </main>
-        <Footer />
-      </>
-    );
-  }
-
-  if (error) {
-    return (
-      <>
-        <Header />
-        <main style={{ maxWidth: 1020, margin: '0 auto', padding: '40px 24px' }}>
-          <Link
-            to="/deal-rooms"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 13,
-              color: 'var(--fg-muted)',
-              textDecoration: 'none',
-              marginBottom: 24,
-            }}
-          >
-            <ArrowLeft size={14} />
-            Back to deal rooms
-          </Link>
-          <div
-            style={{
-              background: '#fdecea',
-              color: 'var(--rust-600)',
-              padding: '12px 16px',
-              borderRadius: 8,
-              fontSize: 14,
-            }}
-          >
-            {error}
-          </div>
-        </main>
-        <Footer />
-      </>
-    );
-  }
-
-  const canUpload = myRole === 'owner' || myRole === 'editor';
-  const isOwner = myRole === 'owner';
+  if (loading) return <div style={s.page}><div style={{padding:64,textAlign:'center',color:'#888'}}>Loading...</div></div>;
+  if (!room)   return <div style={s.page}><div style={{padding:64,textAlign:'center',color:'#888'}}>Room not found.</div></div>;
 
   return (
-    <>
-      <Header />
-      <main style={{ maxWidth: 1020, margin: '0 auto', padding: '40px 24px 80px' }}>
-        <Link
-          to="/deal-rooms"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 13,
-            color: 'var(--fg-muted)',
-            textDecoration: 'none',
-            marginBottom: 24,
-          }}
-        >
-          <ArrowLeft size={14} />
-          All deal rooms
-        </Link>
+    <div style={s.page}>
+      <div style={s.hdr}>
+        <Link to="/deal-rooms" style={s.back}><ArrowLeft size={16}/> All deal rooms</Link>
+        <div style={{flex:1}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <h1 style={s.title}>{room.name}</h1>
+            <span style={s.badge((STATUS_META[room.status]||STATUS_META.active).color)}>
+              {(STATUS_META[room.status]||STATUS_META.active).label}
+            </span>
+          </div>
+          {room.description && <div style={s.sub}>{room.description}</div>}
+        </div>
+        {dealValue && <div style={{textAlign:'right'}}><div style={s.lbl}>Deal Value</div><div style={{fontSize:18,fontWeight:700,color:'#111'}}>{room.currency||'USD'} {Number(dealValue).toLocaleString()}</div></div>}
+      </div>
 
-        <div style={{ marginBottom: 32 }}>
-          <div
-            style={{
-              fontSize: 11,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: 'var(--fg-muted)',
-              marginBottom: 6,
-            }}
-          >
-            {room.project?.title || 'Project'}
+      <div style={s.tabs}>
+        {TABS.map(t => <button key={t} style={s.tab(tab===t)} onClick={()=>setTab(t)}>{t}</button>)}
+      </div>
+
+      <div style={s.body}>
+        {tab==='Overview'   && <OverviewTab   room={room} members={members} milestones={milestones} completedCount={completedCount} currentMS={currentMS} isOwner={isOwner} onRefresh={load}/>}
+        {tab==='Milestones' && <MilestonesTab roomId={id} milestones={milestones} canEdit={canEdit} onRefresh={load}/>}
+        {tab==='Discussion' && <DiscussionTab roomId={id} threads={threads} me={me} canEdit={canEdit} onRefresh={load}/>}
+        {tab==='Documents'  && <DocumentsTab  roomId={id} docs={docs} me={me} isOwner={isOwner} canEdit={canEdit} onRefresh={load}/>}
+        {tab==='Members'    && <MembersTab    roomId={id} members={members} isOwner={isOwner} onRefresh={load}/>}
+        {tab==='Activity'   && <ActivityTab   activity={activity}/>}
+      </div>
+    </div>
+  );
+}
+function OverviewTab({ room, members, milestones, completedCount, currentMS, isOwner, onRefresh }) {
+  const [editing, setEditing] = useState(false);
+  const [status, setStatus] = useState(room.status||'active');
+  const [valOverride, setValOverride] = useState(room.deal_value_override||'');
+  const [saving, setSaving] = useState(false);
+  const progress = milestones.length ? Math.round((completedCount/milestones.length)*100) : 0;
+  async function handleSave() {
+    setSaving(true);
+    try { await api(/api/deal-rooms/+room.id, {method:'PATCH',body:JSON.stringify({status,deal_value_override:valOverride||null})}); setEditing(false); onRefresh(); }
+    catch {} finally { setSaving(false); }
+  }
+  return (
+    <div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:16,marginBottom:24}}>
+        <div style={s.card}><div style={s.lbl}>Participants</div><div style={s.val}>{members.length}</div></div>
+        <div style={s.card}><div style={s.lbl}>Progress</div><div style={s.val}>{completedCount}/{milestones.length} milestones</div></div>
+        <div style={s.card}><div style={s.lbl}>Current Stage</div><div style={s.val}>{currentMS?.label||'—'}</div></div>
+      </div>
+      <div style={s.card}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
+          <span style={s.lbl}>Transaction Progress</span>
+          <span style={{fontSize:13,fontWeight:600,color:'#b8962e'}}>{progress}%</span>
+        </div>
+        <div style={{background:'#f3f4f6',borderRadius:4,height:8}}>
+          <div style={{background:'#b8962e',borderRadius:4,height:8,width:progress+'%',transition:'width 0.3s'}}/>
+        </div>
+      </div>
+      {isOwner && (
+        <div style={s.card}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+            <span style={{fontWeight:600,fontSize:15}}>Deal Settings</span>
+            {!editing && <button style={s.btnG} onClick={()=>setEditing(true)}>Edit</button>}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <Lock size={26} style={{ color: 'var(--gold-700)' }} />
-            <h1 style={{ fontSize: 28, margin: 0 }}>{room.name}</h1>
-          </div>
-          {room.description && (
-            <p style={{ color: 'var(--fg-muted)', fontSize: 14, lineHeight: 1.6, margin: 0, maxWidth: 720 }}>
-              {room.description}
-            </p>
+          {editing ? (
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              <div><div style={s.lbl}>Status</div>
+                <select style={{...s.inp,width:'auto'}} value={status} onChange={e=>setStatus(e.target.value)}>
+                  <option value="active">Active</option><option value="on_hold">On Hold</option>
+                  <option value="cancelled">Cancelled</option><option value="completed">Completed</option>
+                </select>
+              </div>
+              <div><div style={s.lbl}>Deal Value Override (USD)</div>
+                <input style={{...s.inp,width:240}} type="number" value={valOverride} onChange={e=>setValOverride(e.target.value)} placeholder="Negotiated value"/>
+              </div>
+              <div style={{display:'flex',gap:10}}>
+                <button style={s.btn} onClick={handleSave} disabled={saving}>{saving?'Saving...':'Save'}</button>
+                <button style={s.btnG} onClick={()=>setEditing(false)}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+              <div><div style={s.lbl}>Status</div><div style={s.val}>{STATUS_META[room.status]?.label||'Active'}</div></div>
+              <div><div style={s.lbl}>Value Override</div><div style={s.val}>{room.deal_value_override?USD +Number(room.deal_value_override).toLocaleString():'Not set'}</div></div>
+            </div>
           )}
         </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) 320px',
-            gap: 32,
-          }}
-          data-deal-room-grid
-        >
-          <div>
-            <DocumentsPanel
-              roomId={id}
-              documents={documents}
-              myRole={myRole}
-              canUpload={canUpload}
-              isOwner={isOwner}
-              onChange={load}
-            />
-
-            <ActivityPanel
-              open={activityOpen}
-              onToggle={toggleActivity}
-              activity={activity}
-            />
-          </div>
-
-          <MembersPanel
-            roomId={id}
-            members={members}
-            myRole={myRole}
-            isOwner={isOwner}
-            onChange={load}
-          />
-        </div>
-
-        <style>{`
-          @media (max-width: 900px) {
-            [data-deal-room-grid] { grid-template-columns: 1fr !important; }
-          }
-        `}</style>
-      </main>
-      <Footer />
-    </>
+      )}
+    </div>
   );
 }
 
-// ---------- Documents ----------
-
-function DocumentsPanel({ roomId, documents, myRole, canUpload, isOwner, onChange }) {
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState(null);
-  const [busyId, setBusyId] = useState(null);
-
-  async function handleUpload(e) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    setUploadError(null);
-
-    if (file.size > MAX_FILE_BYTES) {
-      setUploadError('File is larger than 50 MB.');
-      return;
-    }
-    if (!ALLOWED_MIME.includes(file.type)) {
-      setUploadError('Unsupported file type. Use PDF, image, Office doc, or ZIP.');
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.append('file', file);
-      const token = getAccessToken();
-      const res = await fetch(`${BASE_URL}/api/deal-rooms/${roomId}/documents`, {
-        method: 'POST',
-        body: form,
-        credentials: 'include',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) {
-        let msg = `Upload failed (HTTP ${res.status})`;
-        try { const b = await res.json(); if (b.error) msg = b.error; } catch {}
-        throw new Error(msg);
-      }
-      await onChange();
-    } catch (err) {
-      setUploadError(err.message);
-    } finally {
-      setUploading(false);
-    }
+function MilestonesTab({ roomId, milestones, canEdit, onRefresh }) {
+  const [busy, setBusy] = useState(null);
+  async function advance(seq, cur) {
+    const next = cur==='pending'?'active':cur==='active'?'completed':null;
+    if (!next) return;
+    setBusy(seq);
+    try { await api(/api/deal-rooms/+roomId+/milestones/+seq,{method:'PATCH',body:JSON.stringify({status:next})}); onRefresh(); }
+    catch {} finally { setBusy(null); }
   }
-
-  async function handleView(docId) {
-    setBusyId(docId);
-    try {
-      const data = await api(`/api/deal-rooms/${roomId}/documents/${docId}`);
-      if (data.url) window.open(data.url, '_blank', 'noopener,noreferrer');
-    } catch (err) {
-      alert(err.message || 'Failed to open document.');
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleDelete(docId, title) {
-    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
-    setBusyId(docId);
-    try {
-      await api(`/api/deal-rooms/${roomId}/documents/${docId}`, { method: 'DELETE' });
-      await onChange();
-    } catch (err) {
-      alert(err.message || 'Failed to delete document.');
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   return (
-    <section style={{ marginBottom: 32 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-        <h2 style={{ fontSize: 18, margin: 0 }}>Documents</h2>
-        {canUpload && (
-          <label
-            className="btn btn-primary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              fontSize: 13,
-              cursor: uploading ? 'not-allowed' : 'pointer',
-              opacity: uploading ? 0.6 : 1,
-            }}
-          >
-            {uploading ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
-            {uploading ? 'Uploading...' : 'Upload document'}
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.webp,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.zip"
-              onChange={handleUpload}
-              disabled={uploading}
-              style={{ display: 'none' }}
-            />
-          </label>
-        )}
-      </div>
-
-      {uploadError && (
-        <div
-          style={{
-            background: '#fdecea',
-            color: 'var(--rust-600)',
-            padding: '10px 14px',
-            borderRadius: 8,
-            fontSize: 13,
-            marginBottom: 14,
-          }}
-        >
-          {uploadError}
-        </div>
-      )}
-
-      {documents.length === 0 ? (
-        <div
-          style={{
-            border: '1px dashed var(--border, #ccc)',
-            borderRadius: 8,
-            padding: 28,
-            textAlign: 'center',
-            color: 'var(--fg-muted)',
-            fontSize: 14,
-          }}
-        >
-          No documents yet.{canUpload ? ' Upload the first one.' : ''}
-        </div>
-      ) : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {documents.map((doc) => (
-            <li
-              key={doc.id}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '12px 16px',
-                border: '1px solid var(--border, #e5e5e5)',
-                borderRadius: 8,
-                background: 'var(--bg-card, #fff)',
-                gap: 12,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
-                <FileText size={18} style={{ color: 'var(--fg-muted)', flexShrink: 0 }} />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {doc.title}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 2 }}>
-                    {formatBytes(doc.size_bytes)} · uploaded by {doc.uploaded_by_name} · {timeAgo(doc.created_at)}
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <button
-                  type="button"
-                  onClick={() => handleView(doc.id)}
-                  disabled={busyId === doc.id}
-                  className="btn btn-ghost"
-                  style={{ fontSize: 12, padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                >
-                  {busyId === doc.id ? <Loader2 size={12} className="spin" /> : <ArrowUpRight size={12} />}
-                  View
-                </button>
-                {(doc.uploaded_by === currentUserId() || isOwner) && (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(doc.id, doc.title)}
-                    disabled={busyId === doc.id}
-                    className="btn btn-ghost"
-                    style={{ fontSize: 12, padding: '6px 10px', color: 'var(--rust-600)' }}
-                    aria-label="Delete document"
-                  >
-                    <Trash2 size={12} />
+    <div style={s.card}>
+      <h3 style={{margin:'0 0 20px',fontSize:16,fontWeight:600}}>Transaction Milestones</h3>
+      {milestones.map((m,i) => {
+        const meta = MILESTONE_STATUS[m.status]||MILESTONE_STATUS.pending;
+        const isLast = i===milestones.length-1;
+        return (
+          <div key={m.id} style={{display:'flex',gap:16,paddingBottom:isLast?0:24,position:'relative'}}>
+            {!isLast && <div style={{position:'absolute',left:11,top:24,bottom:0,width:2,background:m.status==='completed'?'#22c55e':'#e5e7eb'}}/>}
+            <div style={{width:24,height:24,borderRadius:'50%',background:m.status==='completed'?'#22c55e':m.status==='active'?'#b8962e':'#e5e7eb',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:12,color:m.status==='pending'?'#999':'#fff',fontWeight:700,zIndex:1}}>
+              {meta.icon}
+            </div>
+            <div style={{flex:1,paddingTop:2}}>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <span style={{fontWeight:m.status==='active'?700:500,fontSize:14,color:m.status==='pending'?'#999':'#111'}}>{m.label}</span>
+                {m.status==='completed'&&m.completed_at&&<span style={{fontSize:11,color:'#888'}}>{fmt(m.completed_at)}</span>}
+                {canEdit&&m.status!=='completed'&&m.status!=='skipped'&&(
+                  <button style={{...s.btn,padding:'3px 10px',fontSize:11,marginLeft:'auto'}} onClick={()=>advance(m.sequence,m.status)} disabled={busy===m.sequence}>
+                    {m.status==='pending'?'Start':'Complete'}
                   </button>
                 )}
               </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <style>{`
-        .spin { animation: dr-spin 1s linear infinite; }
-        @keyframes dr-spin { to { transform: rotate(360deg); } }
-      `}</style>
-    </section>
+              {m.notes&&<div style={{fontSize:12,color:'#666',marginTop:4}}>{m.notes}</div>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
-// We don't have current user ID in this component's scope.
-// Backend already restricts delete to uploader or owner, so this is just UI hint.
-// Always show delete for owner; for others, backend will reject if not uploader.
-function currentUserId() {
-  try {
-    const raw = localStorage.getItem('sarego_access');
-    if (!raw) return null;
-    const payload = JSON.parse(atob(raw.split('.')[1]));
-    return payload.sub || payload.id || null;
-  } catch {
-    return null;
+function DiscussionTab({ roomId, threads, me, canEdit, onRefresh }) {
+  const [active, setActive] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [body, setBody] = useState('');
+  const [sending, setSending] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const bottomRef = useRef(null);
+
+  async function loadThread(t) {
+    setActive(t);
+    try { const d = await api(/api/deal-rooms/+roomId+/threads/+t.id+/messages); setMessages(d.messages||[]); }
+    catch { setMessages([]); }
   }
+  useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:'smooth'}); },[messages]);
+  async function handleSend() {
+    if (!body.trim()) return;
+    setSending(true);
+    try {
+      await api(/api/deal-rooms/+roomId+/threads/+active.id+/messages,{method:'POST',body:JSON.stringify({body:body.trim()})});
+      setBody('');
+      const d = await api(/api/deal-rooms/+roomId+/threads/+active.id+/messages);
+      setMessages(d.messages||[]);
+    } catch {} finally { setSending(false); }
+  }
+  async function handleCreate() {
+    if (!newTitle.trim()) return;
+    setCreating(true);
+    try { await api(/api/deal-rooms/+roomId+/threads,{method:'POST',body:JSON.stringify({title:newTitle.trim()})}); setNewTitle(''); setShowNew(false); onRefresh(); }
+    catch {} finally { setCreating(false); }
+  }
+  return (
+    <div style={{display:'grid',gridTemplateColumns:'240px 1fr',gap:16,minHeight:500}}>
+      <div>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+          <span style={{fontWeight:600,fontSize:14}}>Threads</span>
+          {canEdit&&<button style={{...s.btnG,padding:'4px 10px',fontSize:12}} onClick={()=>setShowNew(!showNew)}>+ New</button>}
+        </div>
+        {showNew&&(
+          <div style={{marginBottom:12}}>
+            <input style={s.inp} placeholder="Thread title" value={newTitle} onChange={e=>setNewTitle(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleCreate()}/>
+            <button style={{...s.btn,marginTop:6,width:'100%'}} onClick={handleCreate} disabled={creating}>{creating?'Creating...':'Create'}</button>
+          </div>
+        )}
+        {threads.map(t=>(
+          <div key={t.id} onClick={()=>loadThread(t)} style={{padding:'10px 12px',borderRadius:8,cursor:'pointer',background:active?.id===t.id?'#fef3cd':'#fff',border:1px solid +(active?.id===t.id?'#b8962e':'#e5e7eb'),marginBottom:6}}>
+            <div style={{fontSize:13,fontWeight:500}}>{t.title}</div>
+            <div style={{fontSize:11,color:'#888',marginTop:2}}>{t.is_default?'Default':'Custom'} · {t.message_count||0} msgs</div>
+          </div>
+        ))}
+      </div>
+      <div style={{background:'#fff',border:'1px solid #e5e7eb',borderRadius:12,display:'flex',flexDirection:'column'}}>
+        {!active?(
+          <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:'#888',fontSize:14,padding:40}}>Select a thread to view messages</div>
+        ):(
+          <>
+            <div style={{padding:'14px 20px',borderBottom:'1px solid #e5e7eb',fontWeight:600,fontSize:15}}>{active.title}</div>
+            <div style={{flex:1,overflowY:'auto',padding:20,display:'flex',flexDirection:'column',gap:12,minHeight:300,maxHeight:400}}>
+              {messages.length===0&&<div style={{color:'#888',fontSize:13,textAlign:'center',padding:32}}>No messages yet.</div>}
+              {messages.map(msg=>{
+                const isMe=msg.sender_id===me;
+                return(
+                  <div key={msg.id} style={{alignSelf:isMe?'flex-end':'flex-start',maxWidth:'70%',background:isMe?'#fef3cd':'#f9fafb',border:1px solid +(isMe?'#b8962e44':'#e5e7eb'),borderRadius:isMe?'12px 12px 4px 12px':'12px 12px 12px 4px',padding:'10px 14px'}}>
+                    <div style={{fontSize:11,color:'#888',marginBottom:4}}>{isMe?'You':msg.sender_name}</div>
+                    <div style={{fontSize:14,color:'#111',lineHeight:1.5}}>{msg.body}</div>
+                    <div style={{fontSize:11,color:'#aaa',marginTop:4,textAlign:'right'}}>{fmtTime(msg.created_at)}</div>
+                  </div>
+                );
+              })}
+              <div ref={bottomRef}/>
+            </div>
+            <div style={{padding:'12px 20px',borderTop:'1px solid #e5e7eb',display:'flex',gap:10}}>
+              <textarea style={{...s.ta,minHeight:44,flex:1}} placeholder="Type a message... (Enter to send)" value={body} onChange={e=>setBody(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSend();}}}/>
+              <button style={{...s.btn,alignSelf:'flex-end'}} onClick={handleSend} disabled={sending||!body.trim()}>{sending?'...':'Send'}</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+function DocumentsTab({ roomId, docs, me, isOwner, canEdit, onRefresh }) {
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState(null);
+  const fileRef = useRef(null);
+  const BASE_URL = import.meta.env.VITE_API_URL || '';
+
+  async function handleUpload(e) {
+    const file = e.target.files[0]; if (!file) return;
+    setUploading(true); setErr(null);
+    const form = new FormData(); form.append('document', file);
+    const token = getAccessToken();
+    try {
+      const res = await fetch(\/api/deal-rooms/\/documents, {method:'POST',body:form,credentials:'include',headers:{Authorization:Bearer \}});
+      if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Upload failed'); }
+      onRefresh();
+    } catch(ex) { setErr(ex.message); } finally { setUploading(false); e.target.value=''; }
+  }
+  async function handleView(docId) {
+    try { const d=await api(/api/deal-rooms/\/documents/\); window.open(d.url,'_blank'); } catch {}
+  }
+  async function handleDelete(docId, name) {
+    if (!confirm(Delete "\"?)) return;
+    try { await api(/api/deal-rooms/\/documents/\,{method:'DELETE'}); onRefresh(); } catch {}
+  }
+  return (
+    <div style={s.card}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <h3 style={{margin:0,fontSize:16,fontWeight:600}}>Documents</h3>
+        {canEdit&&(
+          <>
+            <button style={s.btn} onClick={()=>fileRef.current?.click()} disabled={uploading}>{uploading?'Uploading...':'↑ Upload'}</button>
+            <input ref={fileRef} type="file" style={{display:'none'}} onChange={handleUpload}/>
+          </>
+        )}
+      </div>
+      {err&&<div style={s.err}>{err}</div>}
+      {docs.length===0&&<div style={{color:'#888',fontSize:14,textAlign:'center',padding:32}}>No documents yet.</div>}
+      {docs.map(doc=>(
+        <div key={doc.id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderBottom:'1px solid #f3f4f6'}}>
+          <FileText size={18} color="#b8962e"/>
+          <div style={{flex:1}}>
+            <div style={{fontSize:14,fontWeight:500}}>{doc.title||doc.filename}</div>
+            <div style={{fontSize:12,color:'#888'}}>{doc.file_size_bytes?Math.round(doc.file_size_bytes/1024)+' KB':''} · {fmt(doc.created_at)}</div>
+          </div>
+          <button style={{...s.btnG,padding:'5px 12px',fontSize:12}} onClick={()=>handleView(doc.id)}>↗ View</button>
+          {(isOwner||doc.uploaded_by===me)&&<button style={{background:'transparent',border:'none',cursor:'pointer',color:'#ef4444'}} onClick={()=>handleDelete(doc.id,doc.title||doc.filename)}><Trash2 size={14}/></button>}
+        </div>
+      ))}
+    </div>
+  );
 }
 
-// ---------- Members ----------
-
-function MembersPanel({ roomId, members, myRole, isOwner, onChange }) {
+function MembersTab({ roomId, members, isOwner, onRefresh }) {
   const [showInvite, setShowInvite] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('viewer');
   const [inviting, setInviting] = useState(false);
-  const [inviteError, setInviteError] = useState(null);
-  const [inviteSuccess, setInviteSuccess] = useState(null);
-  const [busyUserId, setBusyUserId] = useState(null);
+  const [err, setErr] = useState(null);
+  const [ok, setOk] = useState(null);
+  const ROLE_COLOR = { owner:'#b8962e', editor:'#6366f1', viewer:'#22c55e' };
 
-  async function handleInvite(e) {
-    e.preventDefault();
-    setInviting(true);
-    setInviteError(null);
-    setInviteSuccess(null);
-    try {
-      await api(`/api/deal-rooms/${roomId}/invite`, {
-        method: 'POST',
-        body: JSON.stringify({ email: email.trim(), role }),
-      });
-      setInviteSuccess('Member invited.');
-      setEmail('');
-      await onChange();
-    } catch (err) {
-      setInviteError(err.message || 'Invite failed.');
-    } finally {
-      setInviting(false);
-    }
+  async function handleInvite() {
+    setInviting(true); setErr(null); setOk(null);
+    try { await api(/api/deal-rooms/\/invite,{method:'POST',body:JSON.stringify({email:email.trim(),role})}); setOk('Invited.'); setEmail(''); onRefresh(); }
+    catch(ex) { setErr(ex.message||'Failed'); } finally { setInviting(false); }
   }
-
   async function handleRemove(userId, name) {
-    if (!confirm(`Remove ${name} from this deal room?`)) return;
-    setBusyUserId(userId);
-    try {
-      await api(`/api/deal-rooms/${roomId}/members/${userId}`, { method: 'DELETE' });
-      await onChange();
-    } catch (err) {
-      alert(err.message || 'Remove failed.');
-    } finally {
-      setBusyUserId(null);
-    }
+    if (!confirm(Remove \?)) return;
+    try { await api(/api/deal-rooms/\/members/\,{method:'DELETE'}); onRefresh(); } catch {}
   }
-
   return (
-    <aside
-      style={{
-        border: '1px solid var(--border, #e5e5e5)',
-        borderRadius: 12,
-        padding: 20,
-        background: 'var(--bg-card, #fff)',
-        alignSelf: 'flex-start',
-        position: 'sticky',
-        top: 24,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h3 style={{ fontSize: 14, margin: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <Users size={14} /> Members
-        </h3>
-        {isOwner && (
-          <button
-            type="button"
-            onClick={() => setShowInvite(!showInvite)}
-            className="btn btn-ghost"
-            style={{ fontSize: 12, padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-          >
-            {showInvite ? <X size={12} /> : <UserPlus size={12} />}
-            {showInvite ? 'Cancel' : 'Invite'}
-          </button>
-        )}
+    <div style={s.card}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <h3 style={{margin:0,fontSize:16,fontWeight:600}}>Participants</h3>
+        {isOwner&&<button style={s.btnG} onClick={()=>setShowInvite(!showInvite)}>+ Invite</button>}
       </div>
-
-      {showInvite && (
-        <form onSubmit={handleInvite} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--border, #e5e5e5)' }}>
-          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
-            Email
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={inviting}
-            required
-            placeholder="invitee@example.com"
-            style={{ width: '100%', padding: '8px 10px', fontSize: 13, borderRadius: 6, border: '1px solid var(--border, #ccc)', marginBottom: 8 }}
-          />
-          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
-            Role
-          </label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            disabled={inviting}
-            style={{ width: '100%', padding: '8px 10px', fontSize: 13, borderRadius: 6, border: '1px solid var(--border, #ccc)', marginBottom: 10, background: '#fff' }}
-          >
-            <option value="viewer">Viewer (read only)</option>
-            <option value="editor">Editor (can upload)</option>
-          </select>
-          {inviteError && (
-            <div style={{ fontSize: 12, color: 'var(--rust-600)', marginBottom: 8 }}>{inviteError}</div>
-          )}
-          {inviteSuccess && (
-            <div style={{ fontSize: 12, color: 'var(--sage-700)', marginBottom: 8 }}>{inviteSuccess}</div>
-          )}
-          <button type="submit" disabled={inviting} className="btn btn-primary" style={{ width: '100%', fontSize: 13, padding: '8px 12px' }}>
-            {inviting ? 'Sending...' : 'Send invite'}
-          </button>
-        </form>
+      {showInvite&&(
+        <div style={{background:'#f9fafb',border:'1px solid #e5e7eb',borderRadius:8,padding:16,marginBottom:20}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr auto auto',gap:8,alignItems:'end'}}>
+            <div><div style={s.lbl}>Email</div><input style={s.inp} type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="invitee@example.com"/></div>
+            <div><div style={s.lbl}>Role</div>
+              <select style={{...s.inp,width:'auto'}} value={role} onChange={e=>setRole(e.target.value)}>
+                <option value="viewer">Viewer</option><option value="editor">Editor</option>
+              </select>
+            </div>
+            <button style={{...s.btn,alignSelf:'flex-end'}} onClick={handleInvite} disabled={inviting}>{inviting?'...':'Invite'}</button>
+          </div>
+          {err&&<div style={s.err}>{err}</div>}
+          {ok&&<div style={{color:'#22c55e',fontSize:13,marginTop:6}}>{ok}</div>}
+        </div>
       )}
-
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {members.map((m) => {
-          const badge = ROLE_BADGE[m.room_role] || ROLE_BADGE.viewer;
-          return (
-            <li key={m.user_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {m.full_name}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--fg-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {m.email}
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    color: badge.color,
-                    border: `1px solid ${badge.color}`,
-                    padding: '2px 6px',
-                    borderRadius: 3,
-                  }}
-                >
-                  {badge.label}
-                </span>
-                {isOwner && m.room_role !== 'owner' && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(m.user_id, m.full_name)}
-                    disabled={busyUserId === m.user_id}
-                    aria-label={`Remove ${m.full_name}`}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: 2,
-                      color: 'var(--rust-600)',
-                      display: 'inline-flex',
-                    }}
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </aside>
+      {members.map(m=>(
+        <div key={m.user_id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderBottom:'1px solid #f3f4f6'}}>
+          <div style={{width:38,height:38,borderRadius:'50%',background:'#fef3cd',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:14,color:'#b8962e',flexShrink:0}}>
+            {(m.full_name||'?').split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:14,fontWeight:500}}>{m.full_name}</div>
+            <div style={{fontSize:12,color:'#888'}}>{m.email}</div>
+          </div>
+          <span style={{fontSize:11,fontWeight:700,color:ROLE_COLOR[m.room_role]||'#888',border:1px solid \,padding:'2px 8px',borderRadius:4,textTransform:'uppercase'}}>{m.room_role}</span>
+          {isOwner&&m.room_role!=='owner'&&<button style={{background:'transparent',border:'none',cursor:'pointer',color:'#ef4444'}} onClick={()=>handleRemove(m.user_id,m.full_name)}><Trash2 size={14}/></button>}
+        </div>
+      ))}
+    </div>
   );
 }
 
-// ---------- Activity ----------
-
-function ActivityPanel({ open, onToggle, activity }) {
+function ActivityTab({ activity }) {
+  const ACTION_LABEL = {
+    view:'viewed the room', upload:'uploaded a document', download:'downloaded a document',
+    delete:'deleted a document', invite:'invited a member', remove:'removed a member',
+    thread_message:'posted a message', milestone_active:'started a milestone', milestone_completed:'completed a milestone',
+  };
   return (
-    <section style={{ marginTop: 16 }}>
-      <button
-        type="button"
-        onClick={onToggle}
-        style={{
-          background: 'transparent',
-          border: '1px solid var(--border, #e5e5e5)',
-          borderRadius: 8,
-          padding: '10px 14px',
-          fontSize: 13,
-          fontWeight: 500,
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 8,
-          color: 'var(--fg-muted)',
-        }}
-      >
-        <Activity size={14} />
-        {open ? 'Hide activity log' : 'Show activity log'}
-      </button>
-      {open && (
-        <ul style={{ listStyle: 'none', padding: 16, margin: '12px 0 0', background: 'var(--bg-subtle, #fafafa)', borderRadius: 8, fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {activity.length === 0 ? (
-            <li style={{ color: 'var(--fg-muted)' }}>No activity yet.</li>
-          ) : (
-            activity.map((a) => (
-              <li key={a.id} style={{ color: 'var(--fg)' }}>
-                <span style={{ fontWeight: 500 }}>{a.user_name}</span>{' '}
-                <span style={{ color: 'var(--fg-muted)' }}>
-                  {ACTION_LABEL[a.action] || a.action}
-                  {a.document_title ? ` "${a.document_title}"` : ''} · {timeAgo(a.created_at)}
-                </span>
-              </li>
-            ))
-          )}
-        </ul>
-      )}
-    </section>
+    <div style={s.card}>
+      <h3 style={{margin:'0 0 20px',fontSize:16,fontWeight:600}}>Activity Timeline</h3>
+      {activity.length===0&&<div style={{color:'#888',fontSize:14,textAlign:'center',padding:32}}>No activity yet.</div>}
+      {activity.map((a,i)=>(
+        <div key={a.id||i} style={{display:'flex',gap:12,paddingBottom:16,borderBottom:i<activity.length-1?'1px solid #f3f4f6':'none',marginBottom:4}}>
+          <div style={{width:8,height:8,borderRadius:'50%',background:'#b8962e',flexShrink:0,marginTop:6}}/>
+          <div>
+            <span style={{fontSize:14,fontWeight:500}}>{a.user_name||'A user'}</span>
+            <span style={{fontSize:14,color:'#555'}}> {ACTION_LABEL[a.action]||a.action}</span>
+            <div style={{fontSize:12,color:'#888',marginTop:2}}>{fmtTime(a.created_at)}</div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
