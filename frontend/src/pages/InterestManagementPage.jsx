@@ -351,7 +351,7 @@ function AwardConfirmModal({ open, partyName, otherCount, onConfirm, onCancel, b
 // ============================================================
 // Interest Card
 // ============================================================
-function InterestCard({ interest, onAction, busy }) {
+function InterestCard({ interest, onAction, busy, listingType, listingId, onRefresh }) {
   const meta = STATUS_META[interest.status];
   const actions = getActions(interest.status);
   const revealContact = STATUSES_REVEALING_CONTACT.includes(interest.status);
@@ -488,6 +488,11 @@ function InterestCard({ interest, onAction, busy }) {
         </div>
       )}
 
+      {/* Owner response to indicative terms */}
+      {interest.indicative?.amount || interest.indicative?.rate_range || interest.indicative?.tenor ? (
+        <IndicativeResponsePanel interest={interest} listingType={listingType} listingId={listingId} onRefresh={onRefresh} />
+      ) : null}
+
       {/* Action row */}
       {actions.length > 0 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -579,6 +584,129 @@ function SummaryTiles({ counts, listingStatus }) {
 // ============================================================
 // Main Page Component
 // ============================================================
+function IndicativeResponsePanel({ interest, listingType, listingId, onRefresh }) {
+  const [open, setOpen] = React.useState(false);
+  const [type, setType] = React.useState('accepted');
+  const [note, setNote] = React.useState('');
+  const [cAmount, setCAmount] = React.useState('');
+  const [cRate, setCRate] = React.useState('');
+  const [cTenor, setCTenor] = React.useState('');
+  const [cCond, setCCond] = React.useState('');
+  const [saving, setSaving] = React.useState(false);
+  const [err, setErr] = React.useState(null);
+
+  const resp = interest.owner_response;
+
+  const RESP_META = {
+    accepted: { label: 'Accepted', color: '#22c55e' },
+    countered: { label: 'Countered', color: '#f59e0b' },
+    clarification_requested: { label: 'Clarification Requested', color: '#6366f1' },
+  };
+
+  async function handleSubmit() {
+    setSaving(true); setErr(null);
+    try {
+      const { api } = await import('../lib/api');
+      await api(`/api/my-listings/${listingType}/${listingId}/interest/${interest.id}/respond`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          response_type: type,
+          note: note || undefined,
+          counter_amount: cAmount ? Number(cAmount) : undefined,
+          counter_rate_range: cRate || undefined,
+          counter_tenor: cTenor || undefined,
+          counter_conditions: cCond || undefined,
+        }),
+      });
+      setOpen(false);
+      if (onRefresh) onRefresh();
+    } catch(e) { setErr(e.message || 'Failed'); } finally { setSaving(false); }
+  }
+
+  const panelStyle = {
+    padding: '10px 12px',
+    borderRadius: 6,
+    border: '1px solid rgba(192, 132, 252, 0.2)',
+    background: 'rgba(192, 132, 252, 0.04)',
+    fontSize: 12,
+    marginBottom: 12,
+  };
+
+  return (
+    <div style={panelStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 10, color: '#c084fc', letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 600 }}>
+          Indicative Terms Submitted
+        </span>
+        {resp?.type ? (
+          <span style={{ fontSize: 11, fontWeight: 700, color: RESP_META[resp.type]?.color || '#888', border: `1px solid ${RESP_META[resp.type]?.color || '#888'}`, padding: '1px 8px', borderRadius: 4 }}>
+            {RESP_META[resp.type]?.label}
+          </span>
+        ) : (
+          <button onClick={() => setOpen(!open)} style={{ fontSize: 11, color: '#b8962e', border: '1px solid rgba(184,150,46,0.4)', background: 'transparent', borderRadius: 4, padding: '2px 10px', cursor: 'pointer' }}>
+            {open ? 'Cancel' : 'Respond'}
+          </button>
+        )}
+      </div>
+
+      {resp?.type && (
+        <div style={{ marginTop: 6, color: 'rgba(255,255,255,0.6)' }}>
+          {resp.note && <div style={{ marginTop: 4 }}>{resp.note}</div>}
+          {resp.counter_amount && <div>Counter Amount: ${Number(resp.counter_amount).toLocaleString()}</div>}
+          {resp.counter_rate && <div>Counter Rate: {resp.counter_rate}</div>}
+          {resp.counter_tenor && <div>Counter Tenor: {resp.counter_tenor}</div>}
+          {resp.counter_conditions && <div>Counter Conditions: {resp.counter_conditions}</div>}
+        </div>
+      )}
+
+      {open && !resp?.type && (
+        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>RESPONSE TYPE</div>
+            <select value={type} onChange={e => setType(e.target.value)} style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%' }}>
+              <option value="accepted">Accept indicative terms</option>
+              <option value="countered">Counter with different terms</option>
+              <option value="clarification_requested">Request clarification</option>
+            </select>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>NOTE (optional)</div>
+            <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note to your response..." style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', minHeight: 60, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+          </div>
+          {type === 'countered' && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>COUNTER AMOUNT (USD)</div>
+                  <input type="number" value={cAmount} onChange={e => setCAmount(e.target.value)} placeholder="e.g. 5000000" style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>COUNTER RATE RANGE</div>
+                  <input value={cRate} onChange={e => setCRate(e.target.value)} placeholder="e.g. 8-10% p.a." style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>COUNTER TENOR</div>
+                  <input value={cTenor} onChange={e => setCTenor(e.target.value)} placeholder="e.g. 36 months" style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>COUNTER CONDITIONS</div>
+                  <input value={cCond} onChange={e => setCCond(e.target.value)} placeholder="e.g. Security required" style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+            </>
+          )}
+          {err && <div style={{ color: '#ef4444', fontSize: 12 }}>{err}</div>}
+          <button onClick={handleSubmit} disabled={saving} style={{ background: '#b8962e', color: '#0d0d0d', border: 'none', borderRadius: 6, padding: '8px 16px', fontWeight: 700, fontSize: 12, cursor: saving ? 'not-allowed' : 'pointer', alignSelf: 'flex-end' }}>
+            {saving ? 'Saving...' : 'Submit Response'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function InterestManagementPage() {
   const { listing_type, listing_id } = useParams();
   const navigate = useNavigate();
@@ -812,6 +940,9 @@ export default function InterestManagementPage() {
                 key={interest.id}
                 interest={interest}
                 onAction={handleAction}
+                listingType={listing_type}
+                listingId={listing_id}
+                onRefresh={fetchData}
                 busy={actionBusy === interest.id}
               />
             ))}

@@ -179,6 +179,13 @@ router.get(
          oi.indicative_rate_range,
          oi.indicative_tenor,
          oi.conditions,
+         oi.owner_response,
+         oi.owner_response_note,
+         oi.owner_counter_amount,
+         oi.owner_counter_rate_range,
+         oi.owner_counter_tenor,
+         oi.owner_counter_conditions,
+         oi.owner_responded_at,
          u.id          AS user_id,
          u.full_name   AS user_full_name,
          u.email       AS user_email,
@@ -231,6 +238,15 @@ router.get(
           rate_range: row.indicative_rate_range,
           tenor:      row.indicative_tenor,
           conditions: row.conditions,
+        },
+        owner_response: {
+          type:             row.owner_response || null,
+          note:             row.owner_response_note || null,
+          counter_amount:   row.owner_counter_amount != null ? Number(row.owner_counter_amount) : null,
+          counter_rate:     row.owner_counter_rate_range || null,
+          counter_tenor:    row.owner_counter_tenor || null,
+          counter_conditions: row.owner_counter_conditions || null,
+          responded_at:     row.owner_responded_at || null,
         },
         user: {
           id: row.user_id,
@@ -471,6 +487,55 @@ router.patch(
       updated: { id: interest_id, status: 'awarded' },
       cascade: cascadeResult,
     });
+  })
+);
+
+// ============================================================
+// PATCH /api/my-listings/:listing_type/:listing_id/interest/:interest_id/respond
+// Owner responds to indicative terms: accept, counter, or request clarification.
+// ============================================================
+const RESPOND_SCHEMA = z.object({
+  response_type: z.enum(['accepted', 'countered', 'clarification_requested']),
+  note:          z.string().max(1000).optional(),
+  counter_amount:     z.number().positive().optional(),
+  counter_rate_range: z.string().max(100).optional(),
+  counter_tenor:      z.string().max(100).optional(),
+  counter_conditions: z.string().max(1000).optional(),
+});
+
+router.patch(
+  '/:listing_type/:listing_id/interest/:interest_id/respond',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { listing_type, listing_id, interest_id } = req.params;
+    const body = RESPOND_SCHEMA.parse(req.body || {});
+    await assertOwnership(req, listing_type, listing_id);
+
+    const current = await query(
+      `SELECT id, indicative_amount, indicative_rate_range, indicative_tenor, conditions
+         FROM opportunity_interests WHERE id = $1 AND opportunity_type = $2 AND opportunity_id = $3`,
+      [interest_id, listing_type, listing_id]
+    );
+    if (current.rowCount === 0) return res.status(404).json({ error: 'Interest not found' });
+
+    const r = await query(
+      `UPDATE opportunity_interests SET
+         owner_response           = $1,
+         owner_response_note      = $2,
+         owner_counter_amount     = $3,
+         owner_counter_rate_range = $4,
+         owner_counter_tenor      = $5,
+         owner_counter_conditions = $6,
+         owner_responded_at       = now(),
+         updated_at               = now()
+       WHERE id = $7
+       RETURNING id, owner_response, owner_responded_at`,
+      [body.response_type, body.note || null, body.counter_amount || null,
+       body.counter_rate_range || null, body.counter_tenor || null,
+       body.counter_conditions || null, interest_id]
+    );
+
+    res.json({ updated: r.rows[0] });
   })
 );
 
