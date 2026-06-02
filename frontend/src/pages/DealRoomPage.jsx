@@ -254,7 +254,7 @@ function DiscussionTab({ roomId, threads, me, canEdit, onRefresh }) {
           </div>
         )}
         {threads.map(t=>(
-          <div key={t.id} onClick={()=>loadThread(t)} style={{padding:'10px 12px',borderRadius:8,cursor:'pointer',background:active?.id===t.id?'#fef3cd':'#fff',border:`1px solid ${active?.id===t.id?'#b8962e':'#e5e7eb'}`,marginBottom:6}}>
+          <div key={t.id} onClick={()=>loadThread(t)} style={{padding:'10px 12px',borderRadius:8,cursor:'pointer',background:active?.id===t.id?'rgba(184,150,46,0.15)':'rgba(255,255,255,0.05)',border:`1px solid ${active?.id===t.id?'#b8962e':'#e5e7eb'}`,marginBottom:6}}>
             <div style={{fontSize:13,fontWeight:500,color:'#e8e0d0'}}>{t.title}</div>
             <div style={{fontSize:11,color:'#b0a898',marginTop:2}}>{t.is_default?'Default':'Custom'} · {t.message_count||0} msgs</div>
           </div>
