@@ -53,14 +53,14 @@ export default function DealRoomPage() {
 
   async function load() {
     try {
-      const d = await api(/api/deal-rooms/+id);
+      const d = await api(`/api/deal-rooms/${id}`);
       setRoom(d.room || d);
       setMembers(d.members || []);
       setDocs(d.documents || []);
     } catch { navigate('/login'); return; }
-    try { const d = await api(/api/deal-rooms/+id+/milestones); setMilestones(d.milestones||[]); } catch {}
-    try { const d = await api(/api/deal-rooms/+id+/threads);    setThreads(d.threads||[]);    } catch {}
-    try { const d = await api(/api/deal-rooms/+id+/activity);   setActivity(d.log||[]);       } catch {}
+    try { const d = await api(`/api/deal-rooms/${id}/milestones`); setMilestones(d.milestones||[]); } catch {}
+    try { const d = await api(`/api/deal-rooms/${id}/threads`);    setThreads(d.threads||[]);    } catch {}
+    try { const d = await api(`/api/deal-rooms/${id}/activity`);   setActivity(d.log||[]);       } catch {}
     setLoading(false);
   }
 
@@ -115,7 +115,7 @@ function OverviewTab({ room, members, milestones, completedCount, currentMS, isO
   const progress = milestones.length ? Math.round((completedCount/milestones.length)*100) : 0;
   async function handleSave() {
     setSaving(true);
-    try { await api(/api/deal-rooms/+room.id, {method:'PATCH',body:JSON.stringify({status,deal_value_override:valOverride||null})}); setEditing(false); onRefresh(); }
+    try { await api(`/api/deal-rooms/${room.id}`, {method:'PATCH',body:JSON.stringify({status,deal_value_override:valOverride||null})}); setEditing(false); onRefresh(); }
     catch {} finally { setSaving(false); }
   }
   return (
@@ -174,7 +174,7 @@ function MilestonesTab({ roomId, milestones, canEdit, onRefresh }) {
     const next = cur==='pending'?'active':cur==='active'?'completed':null;
     if (!next) return;
     setBusy(seq);
-    try { await api(/api/deal-rooms/+roomId+/milestones/+seq,{method:'PATCH',body:JSON.stringify({status:next})}); onRefresh(); }
+    try { await api(`/api/deal-rooms/${roomId}/milestones/${seq}`,{method:'PATCH',body:JSON.stringify({status:next})}); onRefresh(); }
     catch {} finally { setBusy(null); }
   }
   return (
@@ -220,7 +220,7 @@ function DiscussionTab({ roomId, threads, me, canEdit, onRefresh }) {
 
   async function loadThread(t) {
     setActive(t);
-    try { const d = await api(/api/deal-rooms/+roomId+/threads/+t.id+/messages); setMessages(d.messages||[]); }
+    try { const d = await api(`/api/deal-rooms/${roomId}/threads/${t.id}/messages`); setMessages(d.messages||[]); }
     catch { setMessages([]); }
   }
   useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:'smooth'}); },[messages]);
@@ -228,16 +228,16 @@ function DiscussionTab({ roomId, threads, me, canEdit, onRefresh }) {
     if (!body.trim()) return;
     setSending(true);
     try {
-      await api(/api/deal-rooms/+roomId+/threads/+active.id+/messages,{method:'POST',body:JSON.stringify({body:body.trim()})});
+      await api(`/api/deal-rooms/${roomId}/threads/${active.id}/messages`,{method:'POST',body:JSON.stringify({body:body.trim()})});
       setBody('');
-      const d = await api(/api/deal-rooms/+roomId+/threads/+active.id+/messages);
+      const d = await api(`/api/deal-rooms/${roomId}/threads/${active.id}/messages`);
       setMessages(d.messages||[]);
     } catch {} finally { setSending(false); }
   }
   async function handleCreate() {
     if (!newTitle.trim()) return;
     setCreating(true);
-    try { await api(/api/deal-rooms/+roomId+/threads,{method:'POST',body:JSON.stringify({title:newTitle.trim()})}); setNewTitle(''); setShowNew(false); onRefresh(); }
+    try { await api(`/api/deal-rooms/${roomId}/threads`,{method:'POST',body:JSON.stringify({title:newTitle.trim()})}); setNewTitle(''); setShowNew(false); onRefresh(); }
     catch {} finally { setCreating(false); }
   }
   return (
@@ -254,7 +254,7 @@ function DiscussionTab({ roomId, threads, me, canEdit, onRefresh }) {
           </div>
         )}
         {threads.map(t=>(
-          <div key={t.id} onClick={()=>loadThread(t)} style={{padding:'10px 12px',borderRadius:8,cursor:'pointer',background:active?.id===t.id?'#fef3cd':'#fff',border:1px solid +(active?.id===t.id?'#b8962e':'#e5e7eb'),marginBottom:6}}>
+          <div key={t.id} onClick={()=>loadThread(t)} style={{padding:'10px 12px',borderRadius:8,cursor:'pointer',background:active?.id===t.id?'#fef3cd':'#fff',border:`1px solid ${active?.id===t.id?'#b8962e':'#e5e7eb'}`,marginBottom:6}}>
             <div style={{fontSize:13,fontWeight:500}}>{t.title}</div>
             <div style={{fontSize:11,color:'#888',marginTop:2}}>{t.is_default?'Default':'Custom'} · {t.message_count||0} msgs</div>
           </div>
@@ -271,7 +271,7 @@ function DiscussionTab({ roomId, threads, me, canEdit, onRefresh }) {
               {messages.map(msg=>{
                 const isMe=msg.sender_id===me;
                 return(
-                  <div key={msg.id} style={{alignSelf:isMe?'flex-end':'flex-start',maxWidth:'70%',background:isMe?'#fef3cd':'#f9fafb',border:1px solid +(isMe?'#b8962e44':'#e5e7eb'),borderRadius:isMe?'12px 12px 4px 12px':'12px 12px 12px 4px',padding:'10px 14px'}}>
+                  <div key={msg.id} style={{alignSelf:isMe?'flex-end':'flex-start',maxWidth:'70%',background:isMe?'#fef3cd':'#f9fafb',border:`1px solid ${isMe?'#b8962e44':'#e5e7eb'}`,borderRadius:isMe?'12px 12px 4px 12px':'12px 12px 12px 4px',padding:'10px 14px'}}>
                     <div style={{fontSize:11,color:'#888',marginBottom:4}}>{isMe?'You':msg.sender_name}</div>
                     <div style={{fontSize:14,color:'#111',lineHeight:1.5}}>{msg.body}</div>
                     <div style={{fontSize:11,color:'#aaa',marginTop:4,textAlign:'right'}}>{fmtTime(msg.created_at)}</div>
@@ -302,17 +302,17 @@ function DocumentsTab({ roomId, docs, me, isOwner, canEdit, onRefresh }) {
     const form = new FormData(); form.append('document', file);
     const token = getAccessToken();
     try {
-      const res = await fetch(\/api/deal-rooms/\/documents, {method:'POST',body:form,credentials:'include',headers:{Authorization:Bearer \}});
+      const res = await fetch(`${BASE_URL}/api/deal-rooms/${roomId}/documents`, {method:'POST',body:form,credentials:'include',headers:{Authorization:`Bearer ${token}`}});
       if (!res.ok) { const d=await res.json(); throw new Error(d.error||'Upload failed'); }
       onRefresh();
     } catch(ex) { setErr(ex.message); } finally { setUploading(false); e.target.value=''; }
   }
   async function handleView(docId) {
-    try { const d=await api(/api/deal-rooms/\/documents/\); window.open(d.url,'_blank'); } catch {}
+    try { const d=await api(`/api/deal-rooms/${roomId}/documents/${docId}`); window.open(d.url,'_blank'); } catch {}
   }
   async function handleDelete(docId, name) {
-    if (!confirm(Delete "\"?)) return;
-    try { await api(/api/deal-rooms/\/documents/\,{method:'DELETE'}); onRefresh(); } catch {}
+    if (!confirm(`Delete "${name}"?`)) return;
+    try { await api(`/api/deal-rooms/${roomId}/documents/${docId}`,{method:'DELETE'}); onRefresh(); } catch {}
   }
   return (
     <div style={s.card}>
@@ -353,12 +353,12 @@ function MembersTab({ roomId, members, isOwner, onRefresh }) {
 
   async function handleInvite() {
     setInviting(true); setErr(null); setOk(null);
-    try { await api(/api/deal-rooms/\/invite,{method:'POST',body:JSON.stringify({email:email.trim(),role})}); setOk('Invited.'); setEmail(''); onRefresh(); }
+    try { await api(`/api/deal-rooms/${roomId}/invite`,{method:'POST',body:JSON.stringify({email:email.trim(),role})}); setOk('Invited.'); setEmail(''); onRefresh(); }
     catch(ex) { setErr(ex.message||'Failed'); } finally { setInviting(false); }
   }
   async function handleRemove(userId, name) {
-    if (!confirm(Remove \?)) return;
-    try { await api(/api/deal-rooms/\/members/\,{method:'DELETE'}); onRefresh(); } catch {}
+    if (!confirm(`Remove ${name}?`)) return;
+    try { await api(`/api/deal-rooms/${roomId}/members/${userId}`,{method:'DELETE'}); onRefresh(); } catch {}
   }
   return (
     <div style={s.card}>
@@ -390,7 +390,7 @@ function MembersTab({ roomId, members, isOwner, onRefresh }) {
             <div style={{fontSize:14,fontWeight:500}}>{m.full_name}</div>
             <div style={{fontSize:12,color:'#888'}}>{m.email}</div>
           </div>
-          <span style={{fontSize:11,fontWeight:700,color:ROLE_COLOR[m.room_role]||'#888',border:1px solid \,padding:'2px 8px',borderRadius:4,textTransform:'uppercase'}}>{m.room_role}</span>
+          <span style={{fontSize:11,fontWeight:700,color:ROLE_COLOR[m.room_role]||'#888',border:`1px solid ${ROLE_COLOR[m.room_role]||'#888'}`,padding:'2px 8px',borderRadius:4,textTransform:'uppercase'}}>{m.room_role}</span>
           {isOwner&&m.room_role!=='owner'&&<button style={{background:'transparent',border:'none',cursor:'pointer',color:'#ef4444'}} onClick={()=>handleRemove(m.user_id,m.full_name)}><Trash2 size={14}/></button>}
         </div>
       ))}
