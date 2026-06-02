@@ -612,4 +612,168 @@ router.get(
   })
 );
 
+
+// ─── PATCH /:id — update room status / deal value ────────────────────────────
+router.patch('/:id', requireAuth, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status, deal_value_override, currency } = req.body;
+  const userId = req.user.id;
+
+  await requireOwner(id, userId);
+
+  const updates = [];
+  const params = [];
+
+  if (status) {
+    if (!['active','on_hold','cancelled','completed'].includes(status))
+      throw new HttpError(400, 'Invalid status');
+    updates.push(`status = $${params.length+1}`); params.push(status);
+  }
+  if (deal_value_override !== undefined) {
+    updates.push(`deal_value_override = $${params.length+1}`); params.push(deal_value_override);
+  }
+  if (currency) {
+    updates.push(`currency = $${params.length+1}`); params.push(currency);
+  }
+
+  if (updates.length === 0) throw new HttpError(400, 'Nothing to update');
+
+  params.push(id);
+  const { rows: [updated] } = await query(
+    `UPDATE deal_rooms SET ${updates.join(', ')}, updated_at = now() WHERE id = $${params.length} RETURNING *`,
+    params
+  );
+  res.json({ room: updated });
+}));
+
+// ─── GET /:id/milestones ─────────────────────────────────────────────────────
+router.get('/:id/milestones', requireAuth, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  await requireMembership(id, req.user.id);
+  const { rows } = await query(
+    `SELECT m.*, u.full_name AS completed_by_name
+     FROM deal_room_milestones m
+     LEFT JOIN users u ON u.id = m.completed_by
+     WHERE m.deal_room_id = $1
+     ORDER BY m.sequence ASC`,
+    [id]
+  );
+  res.json({ milestones: rows });
+}));
+
+// ─── PATCH /:id/milestones/:seq ──────────────────────────────────────────────
+router.patch('/:id/milestones/:seq', requireAuth, asyncHandler(async (req, res) => {
+  const { id, seq } = req.params;
+  const { status, notes } = req.body;
+  const userId = req.user.id;
+
+  const membership = await requireMembership(id, userId);
+  if (membership.room_role !== 'owner' && membership.room_role !== 'editor')
+    throw new HttpError(403, 'Only owner or editors can update milestones');
+
+  if (!['pending','active','completed','skipped'].includes(status))
+    throw new HttpError(400, 'Invalid milestone status');
+
+  const { rows: [milestone] } = await query(
+    `UPDATE deal_room_milestones
+     SET status = $1,
+         notes = COALESCE($2, notes),
+         completed_at = CASE WHEN $1 = 'completed' THEN now() ELSE NULL END,
+         completed_by = CASE WHEN $1 = 'completed' THEN $3 ELSE NULL END,
+         updated_at = now()
+     WHERE deal_room_id = $4 AND sequence = $5
+     RETURNING *`,
+    [status, notes || null, userId, id, parseInt(seq)]
+  );
+  if (!milestone) throw new HttpError(404, 'Milestone not found');
+
+  await logAccess({ roomId: id, userId, action: `milestone_${status}`, req });
+  res.json({ milestone });
+}));
+
+// ─── GET /:id/threads ────────────────────────────────────────────────────────
+router.get('/:id/threads', requireAuth, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  await requireMembership(id, req.user.id);
+  const { rows } = await query(
+    `SELECT t.*, u.full_name AS created_by_name
+     FROM deal_room_threads t
+     JOIN users u ON u.id = t.created_by
+     WHERE t.deal_room_id = $1
+     ORDER BY t.is_default DESC, t.last_message_at DESC NULLS LAST`,
+    [id]
+  );
+  res.json({ threads: rows });
+}));
+
+// ─── POST /:id/threads ───────────────────────────────────────────────────────
+router.post('/:id/threads', requireAuth, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { title } = req.body;
+  const userId = req.user.id;
+
+  const membership2 = await requireMembership(id, userId);
+  if (membership2.room_role !== 'owner' && membership2.room_role !== 'editor')
+    throw new HttpError(403, 'Only owner or editors can create threads');
+
+  if (!title || !title.trim()) throw new HttpError(400, 'Thread title required');
+
+  const { rows: [thread] } = await query(
+    `INSERT INTO deal_room_threads (deal_room_id, title, is_default, created_by)
+     VALUES ($1, $2, false, $3) RETURNING *`,
+    [id, title.trim(), userId]
+  );
+  res.status(201).json({ thread });
+}));
+
+// ─── GET /:id/threads/:thread_id/messages ────────────────────────────────────
+router.get('/:id/threads/:thread_id/messages', requireAuth, asyncHandler(async (req, res) => {
+  const { id, thread_id } = req.params;
+  await requireMembership(id, req.user.id);
+
+  const { rows: [thread] } = await query(
+    'SELECT * FROM deal_room_threads WHERE id = $1 AND deal_room_id = $2',
+    [thread_id, id]
+  );
+  if (!thread) throw new HttpError(404, 'Thread not found');
+
+  const { rows } = await query(
+    `SELECT m.*, u.full_name AS sender_name, u.email AS sender_email
+     FROM deal_room_thread_messages m
+     JOIN users u ON u.id = m.sender_id
+     WHERE m.thread_id = $1
+     ORDER BY m.created_at ASC`,
+    [thread_id]
+  );
+  res.json({ thread, messages: rows });
+}));
+
+// ─── POST /:id/threads/:thread_id/messages ───────────────────────────────────
+router.post('/:id/threads/:thread_id/messages', requireAuth, asyncHandler(async (req, res) => {
+  const { id, thread_id } = req.params;
+  const { body, attachment_path, attachment_filename, attachment_size_bytes, attachment_mime_type } = req.body;
+  const userId = req.user.id;
+
+  await requireMembership(id, userId);
+
+  const { rows: [thread] } = await query(
+    'SELECT * FROM deal_room_threads WHERE id = $1 AND deal_room_id = $2',
+    [thread_id, id]
+  );
+  if (!thread) throw new HttpError(404, 'Thread not found');
+
+  if (!body && !attachment_path) throw new HttpError(400, 'Message must have body or attachment');
+
+  const { rows: [msg] } = await query(
+    `INSERT INTO deal_room_thread_messages
+       (thread_id, sender_id, body, attachment_path, attachment_filename, attachment_size_bytes, attachment_mime_type)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+    [thread_id, userId, body || null, attachment_path || null,
+     attachment_filename || null, attachment_size_bytes || null, attachment_mime_type || null]
+  );
+
+  await logAccess({ roomId: id, userId, action: 'thread_message', req });
+  res.status(201).json({ message: msg });
+}));
+
 export default router;
