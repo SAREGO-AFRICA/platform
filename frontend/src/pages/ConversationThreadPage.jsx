@@ -140,7 +140,7 @@ export default function ConversationThreadPage() {
       </div>
       <div style={s.comp}>
         <div style={s.compIn}>
-          <textarea style={s.ta} placeholder="Type a message... (Ctrl+Enter to send)" value={body} onChange={e => setBody(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSend(); }} />
+          <textarea style={s.ta} placeholder="Type a message... (Ctrl+Enter to send)" value={body} onChange={e => setBody(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
           <div style={s.crow}>
             <label style={s.flabel}>📎 Attach PDF<input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={handleFileChange} /></label>
             {file && <span style={s.fname}>{file.name}</span>}
