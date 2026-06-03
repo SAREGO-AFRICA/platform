@@ -163,6 +163,8 @@ export default function Header({ variant = 'light' }) {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
                         {[
                           { to: '/dashboard', icon: '⊞', label: 'Dashboard' },
+          { to: '/account', icon: '◈', label: 'My Account' },
+          { to: '/pricing', icon: '★', label: 'Upgrade' },
                           { to: '/my-listings', icon: '📋', label: 'My Listings' },
                           { to: '/conversations', icon: '💬', label: 'Conversations', badge: unreadCount },
                           { to: '/deal-rooms', icon: '🔒', label: 'Deal Rooms' },
