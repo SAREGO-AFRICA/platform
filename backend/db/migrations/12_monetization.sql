@@ -1,0 +1,4 @@
+-- Migration 12: Monetization Foundation (Session L)
+-- Tables: memberships, billing_records, featured_listings, verification_orders
+-- Applied manually via Supabase SQL Editor
+-- Date: 2026-06-03
