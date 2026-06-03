@@ -549,8 +549,6 @@ function CtaRail({
           Engage
         </div>
 
-        {/* SAREGO-CTA-OWNER-FULFILLED */}
-        // SAREGO-CTA-PRIORITY-FIX
         {isOwner ? (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: 'rgba(244, 191, 76, 0.85)' }}>
