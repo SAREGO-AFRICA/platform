@@ -73,8 +73,19 @@ const MATCH_META = {
 
 const FINANCE_TYPES = [
   { value: '', label: 'All finance types' },
-  { value: 'pre_export',      label: 'Pre-Export Finance' },
-  { value: 'working_capital', label: 'Working Capital' },
+  { value: 'pre_export',              label: 'Pre-Export Finance' },
+  { value: 'working_capital',         label: 'Working Capital' },
+  { value: 'invoice_finance',         label: 'Invoice Factoring' },
+  { value: 'purchase_order',          label: 'Purchase Order Finance' },
+  { value: 'lc_facilitation',         label: 'LC Facilitation' },
+  { value: 'supply_chain_finance',    label: 'Supply Chain Finance' },
+  { value: 'structured_trade_finance',label: 'Structured Trade Finance' },
+  { value: 'commodity_finance',       label: 'Commodity Finance' },
+  { value: 'inventory_finance',       label: 'Inventory Finance' },
+  { value: 'project_finance',         label: 'Project Finance' },
+  { value: 'infrastructure_finance',  label: 'Infrastructure Finance' },
+  { value: 'ppp_finance',             label: 'PPP Finance' },
+  { value: 'development_finance',     label: 'Development Finance' },
   { value: 'invoice_finance', label: 'Invoice / Receivables' },
   { value: 'purchase_order',  label: 'Purchase Order Finance' },
   { value: 'lc_facilitation', label: 'LC Facilitation' },
@@ -449,7 +460,7 @@ function selectStyle() {
 
 function formatFinanceType(v) {
   if (!v) return '';
-  return v.split('_').map((w) => w.toLowerCase() === 'lc' ? 'LC' : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  return v.split('_').map((w) => w.toLowerCase() === 'lc' ? 'LC' : w.toLowerCase() === 'ppp' ? 'PPP' : w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
 function formatSector(v) {
