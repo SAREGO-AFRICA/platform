@@ -606,7 +606,6 @@ function IndicativeResponsePanel({ interest, listingType, listingId, onRefresh }
   async function handleSubmit() {
     setSaving(true); setErr(null);
     try {
-      const { api } = await import('../lib/api');
       await api(`/api/my-listings/${listingType}/${listingId}/interest/${interest.id}/respond`, {
         method: 'PATCH',
         body: JSON.stringify({
