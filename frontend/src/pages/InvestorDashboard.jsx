@@ -118,6 +118,12 @@ export default function InvestorDashboard() {
   }
 
   const tier = TIER_COPY[user.trust_tier] || TIER_COPY.unverified;
+  const [membership, setMembership] = React.useState(null);
+  React.useEffect(() => {
+    import('../lib/api').then(({ api }) => {
+      api('/api/memberships/me').then(d => setMembership(d.membership)).catch(() => {});
+    });
+  }, []);
 
   return (
     <div style={{ background: 'var(--ivory-50)', minHeight: '100vh' }}>

@@ -128,6 +128,15 @@ export default function ExpressInterestModal({
     setSubmitting(true);
     setError(null);
     try {
+      // Check membership limit for new interests (not edits)
+      if (mode !== 'edit') {
+        const limitCheck = await api('/api/memberships/increment-interests', { method: 'POST' });
+        if (!limitCheck.allowed) {
+          setError(`You've reached your monthly limit of ${limitCheck.limit} interest expressions. Upgrade to Verified Business for unlimited access.`);
+          setSubmitting(false);
+          return;
+        }
+      }
       // Build body — only include non-empty fields
       const body = {};
       if (message.trim())     body.message = message.trim();
