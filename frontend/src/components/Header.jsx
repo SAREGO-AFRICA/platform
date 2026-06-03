@@ -68,7 +68,7 @@ export default function Header({ variant = 'light' }) {
   const links = [
     // SAREGO-OPP-PAGE-NAV
     { href: '/opportunities', label: t('header.nav.opportunities') },
-    { href: '/provider/browse', label: 'Capital Providers' },
+    { href: '/provider/browse', label: 'Capital Opportunities' },
     { href: '/#marketplace',  label: t('header.nav.marketplace') },
     { href: '/trade-hub',     label: t('header.nav.tradeHub') },
     { href: '/governments',   label: t('header.nav.forGovernments') },
