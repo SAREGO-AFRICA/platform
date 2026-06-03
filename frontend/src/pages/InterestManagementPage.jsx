@@ -585,17 +585,17 @@ function SummaryTiles({ counts, listingStatus }) {
 // Main Page Component
 // ============================================================
 function IndicativeResponsePanel({ interest, listingType, listingId, onRefresh }) {
-  const [open, setOpen] = React.useState(false);
-  const [type, setType] = React.useState('accepted');
-  const [note, setNote] = React.useState('');
-  const [cAmount, setCAmount] = React.useState('');
-  const [cRate, setCRate] = React.useState('');
-  const [cTenor, setCTenor] = React.useState('');
-  const [cCond, setCCond] = React.useState('');
-  const [saving, setSaving] = React.useState(false);
-  const [err, setErr] = React.useState(null);
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState('accepted');
+  const [note, setNote] = useState('');
+  const [cAmount, setCAmount] = useState('');
+  const [cRate, setCRate] = useState('');
+  const [cTenor, setCTenor] = useState('');
+  const [cCond, setCCond] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState(null);
 
-  const resp = interest.owner_response;
+  const resp = (interest.owner_response && interest.owner_response.type) ? interest.owner_response : null;
 
   const RESP_META = {
     accepted: { label: 'Accepted', color: '#22c55e' },
