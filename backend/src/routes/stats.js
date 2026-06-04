@@ -152,7 +152,7 @@ router.get('/analytics', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 
-// ── GET /api/stats/corridors ─────────────────────────────────────────
+// ── GET /api/stats/corridors (v2) ─────────────────────────────────────────
 // List all active trade corridors with flow counts
 router.get('/corridors', asyncHandler(async (req, res) => {
   const { rows } = await query(`
