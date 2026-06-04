@@ -151,4 +151,61 @@ router.get('/analytics', requireAuth, asyncHandler(async (req, res) => {
   res.json({ tier: userTier, is_advanced: isAdvanced, sector_trends: s1.rows, country_activity: s2.rows, finance_type_demand: s3.rows, interest_activity: s4.rows, membership_stats: isAdvanced ? s5.rows : null, generated_at: new Date().toISOString() });
 }));
 
+
+// ── GET /api/stats/corridors ─────────────────────────────────────────
+// List all active trade corridors with flow counts
+router.get('/corridors', asyncHandler(async (req, res) => {
+  const { rows } = await query(`
+    SELECT
+      origin_country_iso   AS origin,
+      destination_country_iso AS destination,
+      COUNT(*)::int        AS flow_count,
+      SUM(value_usd)::bigint AS total_value,
+      array_agg(DISTINCT type) AS types
+    FROM (
+      SELECT origin_country_iso, destination_country_iso, value_usd, 'logistics' AS type
+      FROM logistics_loads WHERE status='published' AND destination_country_iso IS NOT NULL AND origin_country_iso != destination_country_iso
+      UNION ALL
+      SELECT country_iso, destination_country_iso, value_usd, 'trade_finance' AS type
+      FROM trade_finance_requests WHERE status='published' AND destination_country_iso IS NOT NULL AND country_iso != destination_country_iso
+      UNION ALL
+      SELECT country_iso, destination_country_iso, value_usd, 'commodity' AS type
+      FROM commodity_requests WHERE status='published' AND destination_country_iso IS NOT NULL AND country_iso != destination_country_iso
+    ) t
+    GROUP BY origin_country_iso, destination_country_iso
+    ORDER BY flow_count DESC, total_value DESC
+    LIMIT 50
+  `);
+  res.json({ corridors: rows });
+}));
+
+// ── GET /api/stats/corridor/:origin/:destination ──────────────────────
+// Detail for a specific corridor
+router.get('/corridor/:origin/:destination', asyncHandler(async (req, res) => {
+  const { origin, destination } = req.params;
+  const o = origin.toUpperCase(), d = destination.toUpperCase();
+
+  const [logistics, tradeFinance, commodity, summary] = await Promise.all([
+    query(`SELECT id, title, value_usd, cargo_type, weight_tons, load_date, origin_city, destination_city, published_at FROM logistics_loads WHERE status='published' AND origin_country_iso=$1 AND destination_country_iso=$2 ORDER BY published_at DESC LIMIT 20`, [o, d]),
+    query(`SELECT id, title, value_usd, finance_type, sector, published_at FROM trade_finance_requests WHERE status='published' AND country_iso=$1 AND destination_country_iso=$2 ORDER BY published_at DESC LIMIT 20`, [o, d]),
+    query(`SELECT id, title, value_usd, commodity, sector, published_at FROM commodity_requests WHERE status='published' AND country_iso=$1 AND destination_country_iso=$2 ORDER BY published_at DESC LIMIT 20`, [o, d]),
+    query(`
+      SELECT COUNT(*)::int AS total_flows, SUM(value_usd)::bigint AS total_value
+      FROM (
+        SELECT value_usd FROM logistics_loads WHERE status='published' AND origin_country_iso=$1 AND destination_country_iso=$2
+        UNION ALL SELECT value_usd FROM trade_finance_requests WHERE status='published' AND country_iso=$1 AND destination_country_iso=$2
+        UNION ALL SELECT value_usd FROM commodity_requests WHERE status='published' AND country_iso=$1 AND destination_country_iso=$2
+      ) t`, [o, d]),
+  ]);
+
+  res.json({
+    origin: o,
+    destination: d,
+    summary: summary.rows[0],
+    logistics: logistics.rows,
+    trade_finance: tradeFinance.rows,
+    commodity: commodity.rows,
+  });
+}));
+
 export default router;
