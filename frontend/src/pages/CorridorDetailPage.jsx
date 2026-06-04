@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { api } from '../lib/api';
 import Header from '../components/Header';
 import RouteMapWidget from '../components/RouteMapWidget';
 
@@ -42,8 +43,7 @@ export default function CorridorDetailPage() {
 
   useEffect(() => {
     if (!origin || !destination) return;
-    fetch('/api/stats/corridor/'+origin+'/'+destination)
-      .then(r => r.json())
+    api('/api/stats/corridor/'+origin+'/'+destination)
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
   }, [origin, destination]);

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../lib/api';
 import Header from '../components/Header';
 
 const COUNTRY_NAMES = { ZA:'South Africa', ZW:'Zimbabwe', ZM:'Zambia', BW:'Botswana', NA:'Namibia', MZ:'Mozambique', TZ:'Tanzania', MU:'Mauritius', LS:'Lesotho', SZ:'Eswatini', MW:'Malawi', AO:'Angola', CD:'DR Congo', MG:'Madagascar', KE:'Kenya' };
@@ -11,8 +12,7 @@ export default function CorridorsIndexPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/stats/corridors')
-      .then(r => r.json())
+    api('/api/stats/corridors')
       .then(d => { setCorridors(d.corridors||[]); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
