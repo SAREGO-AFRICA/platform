@@ -157,22 +157,19 @@ router.get('/analytics', requireAuth, asyncHandler(async (req, res) => {
 router.get('/corridors', asyncHandler(async (req, res) => {
   const { rows } = await query(`
     SELECT
-      origin_country_iso   AS origin,
-      destination_country_iso AS destination,
-      COUNT(*)::int        AS flow_count,
+      origin AS origin,
+      destination AS destination,
+      COUNT(*)::int AS flow_count,
       SUM(value_usd)::bigint AS total_value,
       array_agg(DISTINCT type) AS types
     FROM (
-      SELECT origin_country_iso, destination_country_iso, value_usd, 'logistics' AS type
-      FROM logistics_loads WHERE status='published' AND destination_country_iso IS NOT NULL AND origin_country_iso != destination_country_iso
+      SELECT origin_country_iso AS origin, destination_country_iso AS destination, value_usd, 'logistics' AS type
+      FROM logistics_loads WHERE status='published' AND destination_country_iso IS NOT NULL AND origin_country_iso IS NOT NULL AND origin_country_iso != destination_country_iso
       UNION ALL
-      SELECT country_iso, destination_country_iso, value_usd, 'trade_finance' AS type
-      FROM trade_finance_requests WHERE status='published' AND destination_country_iso IS NOT NULL AND country_iso != destination_country_iso
-      UNION ALL
-      SELECT country_iso, destination_country_iso, value_usd, 'commodity' AS type
-      FROM commodity_requests WHERE status='published' AND destination_country_iso IS NOT NULL AND country_iso != destination_country_iso
+      SELECT country_iso AS origin, destination_country_iso AS destination, value_usd, 'trade_finance' AS type
+      FROM trade_finance_requests WHERE status='published' AND destination_country_iso IS NOT NULL AND country_iso IS NOT NULL AND country_iso != destination_country_iso
     ) t
-    GROUP BY origin_country_iso, destination_country_iso
+    GROUP BY origin, destination
     ORDER BY flow_count DESC, total_value DESC
     LIMIT 50
   `);
@@ -194,7 +191,6 @@ router.get('/corridor/:origin/:destination', asyncHandler(async (req, res) => {
       FROM (
         SELECT value_usd FROM logistics_loads WHERE status='published' AND origin_country_iso=$1 AND destination_country_iso=$2
         UNION ALL SELECT value_usd FROM trade_finance_requests WHERE status='published' AND country_iso=$1 AND destination_country_iso=$2
-        UNION ALL SELECT value_usd FROM commodity_requests WHERE status='published' AND country_iso=$1 AND destination_country_iso=$2
       ) t`, [o, d]),
   ]);
 
