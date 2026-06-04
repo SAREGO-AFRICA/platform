@@ -498,4 +498,35 @@ router.post(
     res.json({ purged });
   })
 );
+
+router.get('/memberships', requireAuth, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') throw new HttpError(403, 'Admin only');
+  const { rows } = await query(`SELECT m.*, u.email AS user_email FROM memberships m JOIN users u ON u.id = m.user_id ORDER BY m.created_at DESC LIMIT 200`);
+  res.json({ memberships: rows });
+}));
+
+router.get('/verifications', requireAuth, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') throw new HttpError(403, 'Admin only');
+  const { rows } = await query(`SELECT v.*, u.email AS user_email FROM verification_orders v JOIN users u ON u.id = v.user_id ORDER BY v.created_at DESC LIMIT 200`);
+  res.json({ orders: rows });
+}));
+
+router.patch('/verifications/:id/approve', requireAuth, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') throw new HttpError(403, 'Admin only');
+  const { rows: [order] } = await query(`UPDATE verification_orders SET status='approved', reviewed_by=$1, reviewed_at=now(), updated_at=now() WHERE id=$2 RETURNING *`, [req.user.id, req.params.id]);
+  if (!order) throw new HttpError(404, 'Order not found');
+  const tierMap = { business: 'verified', institutional: 'institutional' };
+  await query(`UPDATE users SET trust_tier=$1 WHERE id=$2`, [tierMap[order.verification_type] || 'verified', order.user_id]);
+  await query(`INSERT INTO memberships (user_id, tier, status) VALUES ($1, $2, 'active') ON CONFLICT (user_id) DO UPDATE SET tier=$2, status='active', updated_at=now()`, [order.user_id, order.verification_type === 'institutional' ? 'institutional' : 'verified_business']);
+  res.json({ order });
+}));
+
+router.patch('/verifications/:id/reject', requireAuth, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') throw new HttpError(403, 'Admin only');
+  const { notes } = req.body || {};
+  const { rows: [order] } = await query(`UPDATE verification_orders SET status='rejected', reviewed_by=$1, reviewed_at=now(), reviewer_notes=$2, updated_at=now() WHERE id=$3 RETURNING *`, [req.user.id, notes || null, req.params.id]);
+  if (!order) throw new HttpError(404, 'Order not found');
+  res.json({ order });
+}));
+
 export default router;

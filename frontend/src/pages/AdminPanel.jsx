@@ -23,12 +23,28 @@ import {
 import Header from '../components/Header.jsx';
 import { api, getAccessToken, setAccessToken } from '../lib/api.js';
 
+function MembershipsTab() {
+  const [memberships, setMemberships] = React.useState([]);
+  React.useEffect(() => { import('../lib/api').then(({api}) => api('/api/admin/memberships').then(d => setMemberships(d.memberships||[])).catch(()=>{})); }, []);
+  const TC = { free:'#888', verified_business:'#22c55e', institutional:'#b8962e', enterprise:'#6366f1' };
+  return (<div><h3 style={{ marginBottom:16 }}>Membership Overview</h3><table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}><thead><tr style={{ borderBottom:'1px solid rgba(255,255,255,0.1)', textAlign:'left' }}><th style={{ padding:'8px 12px', color:'#b8962e' }}>User</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Tier</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Status</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Interests Used</th></tr></thead><tbody>{memberships.map(m => (<tr key={m.id} style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }}><td style={{ padding:'8px 12px' }}>{m.user_email||m.user_id?.slice(0,8)}</td><td style={{ padding:'8px 12px' }}><span style={{ color:TC[m.tier]||'#888', fontWeight:600 }}>{m.tier}</span></td><td style={{ padding:'8px 12px' }}>{m.status}</td><td style={{ padding:'8px 12px' }}>{m.interests_used_this_month}</td></tr>))}</tbody></table></div>);
+}
+function VerificationsTab() {
+  const [orders, setOrders] = React.useState([]);
+  React.useEffect(() => { import('../lib/api').then(({api}) => api('/api/admin/verifications').then(d => setOrders(d.orders||[])).catch(()=>{})); }, []);
+  async function approve(id) { const {api} = await import('../lib/api'); await api('/api/admin/verifications/'+id+'/approve', {method:'PATCH'}); setOrders(p => p.map(o => o.id===id?{...o,status:'approved'}:o)); }
+  async function reject(id) { const note = prompt('Rejection reason:'); if (!note) return; const {api} = await import('../lib/api'); await api('/api/admin/verifications/'+id+'/reject', {method:'PATCH',body:JSON.stringify({notes:note})}); setOrders(p => p.map(o => o.id===id?{...o,status:'rejected'}:o)); }
+  const SC = { pending:'#f59e0b', approved:'#22c55e', rejected:'#ef4444', paid:'#22c55e' };
+  return (<div><h3 style={{ marginBottom:16 }}>Verification Orders</h3>{orders.length===0&&<div style={{ color:'#888' }}>No verification orders yet.</div>}<table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}><thead><tr style={{ borderBottom:'1px solid rgba(255,255,255,0.1)', textAlign:'left' }}><th style={{ padding:'8px 12px', color:'#b8962e' }}>User</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Type</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Amount</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Status</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Actions</th></tr></thead><tbody>{orders.map(o => (<tr key={o.id} style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }}><td style={{ padding:'8px 12px' }}>{o.user_email||o.user_id?.slice(0,8)}</td><td style={{ padding:'8px 12px' }}>{o.verification_type}</td><td style={{ padding:'8px 12px' }}>${o.amount_usd}</td><td style={{ padding:'8px 12px' }}><span style={{ color:SC[o.status]||'#888', fontWeight:600 }}>{o.status}</span></td><td style={{ padding:'8px 12px', display:'flex', gap:6 }}>{(o.status==='pending'||o.status==='paid')&&(<><button onClick={()=>approve(o.id)} style={{ background:'#22c55e', color:'#0b0d10', border:'none', borderRadius:4, padding:'3px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>Approve</button><button onClick={()=>reject(o.id)} style={{ background:'#ef4444', color:'#fff', border:'none', borderRadius:4, padding:'3px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>Reject</button></>)}</td></tr>))}</tbody></table></div>);
+}
 const TABS = [
   { id: 'overview', label: 'Overview',     icon: TrendingUp },
   { id: 'projects', label: 'Project Queue', icon: ClipboardList },
   { id: 'kyc',      label: 'KYC Queue',    icon: ShieldCheck },
   { id: 'users',    label: 'Users',        icon: Users },
-  { id: 'audit',    label: 'Audit Log',    icon: FileText },
+  { id: 'audit',      label: 'Audit Log',     icon: FileText },
+  { id: 'memberships',   label: 'Memberships',   icon: Users },
+  { id: 'verifications', label: 'Verifications', icon: ShieldCheck },
   { id: 'listings', label: 'Listings',     icon: Layers },
 ];
 
@@ -179,7 +195,7 @@ export default function AdminPanel() {
           {activeTab === 'projects' && <ProjectQueueTab />}
           {activeTab === 'kyc'      && <KycQueueTab />}
           {activeTab === 'users'    && <UsersTab />}
-          {activeTab === 'audit'    && <AuditLogTab />}
+          {activeTab === 'memberships' ? <MembershipsTab /> : activeTab === 'verifications' ? <VerificationsTab /> : activeTab === 'audit'    && <AuditLogTab />}
           {activeTab === 'listings' && <ListingsTab />}
         </div>
       </section>

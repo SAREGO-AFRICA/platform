@@ -43,7 +43,7 @@ const INSTITUTION_CATEGORIES = [
   'other',
 ];
 
-const FINANCE_TYPES   = ['pre_export', 'working_capital', 'invoice_finance', 'purchase_order', 'lc_facilitation'];
+const FINANCE_TYPES   = ['pre_export', 'working_capital', 'invoice_finance', 'purchase_order', 'lc_facilitation', 'supply_chain_finance', 'structured_trade_finance', 'commodity_finance', 'inventory_finance', 'project_finance', 'infrastructure_finance', 'ppp_finance', 'development_finance'];
 const SECTORS         = ['mining', 'agriculture', 'manufacturing', 'logistics', 'infrastructure', 'energy', 'commodities', 'cross_sector', 'other'];
 const COLLATERAL_TYPES = ['invoice_backed', 'commodity_backed', 'po_backed', 'unsecured', 'equipment_backed'];
 

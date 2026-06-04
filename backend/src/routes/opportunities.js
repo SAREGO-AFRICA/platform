@@ -111,7 +111,7 @@ const CREATE_SCHEMAS = {
 
   trade_finance: z.object({
     ...COMMON_FIELDS,
-    finance_type:            z.enum(['pre_export', 'working_capital', 'invoice_finance', 'purchase_order', 'lc_facilitation'], { errorMap: () => ({ message: 'Pick a finance type' }) }),
+    finance_type:            z.enum(['pre_export', 'working_capital', 'invoice_finance', 'purchase_order', 'lc_facilitation', 'supply_chain_finance', 'structured_trade_finance', 'commodity_finance', 'inventory_finance', 'project_finance', 'infrastructure_finance', 'ppp_finance', 'development_finance'], { errorMap: () => ({ message: 'Pick a finance type' }) }),
     destination_country_iso: z.string().trim().regex(/^[A-Z]{2}$/).optional().nullable(),
     trade_context:           z.enum(['purchase_order', 'export_contract', 'invoice', 'tender_award', 'supply_agreement', 'other'], { errorMap: () => ({ message: 'Pick a trade context' }) }),
     contract_reference:      z.string().trim().max(160).optional().nullable(),

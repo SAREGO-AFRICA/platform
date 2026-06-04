@@ -1,6 +1,7 @@
 // SAREGO-TRADE-FINANCE-INTEGRATION
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import RouteMapWidget from '../components/RouteMapWidget.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, MapPin, Calendar, Users, Shield, Clock, FileText,
@@ -277,6 +278,7 @@ export default function OpportunityDetailPage() {
               <Panel title="Listing Detail">
                 {renderTypePanel(type, opp)}
               </Panel>
+              {type === 'logistics_load' && opp.origin_country_iso && opp.destination_country_iso && (<RouteMapWidget originIso={opp.origin_country_iso} destinationIso={opp.destination_country_iso} originCity={opp.origin_city} destinationCity={opp.destination_city} />)}
               {type === 'trade_finance' && <InstitutionalVisibility id={id} />}
 
               {opp.metadata?.tags?.length > 0 && (

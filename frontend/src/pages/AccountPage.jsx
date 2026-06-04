@@ -114,6 +114,10 @@ export default function AccountPage() {
           ))}
         </div>
 
+        <div style={{ display:'flex', gap:12, justifyContent:'center', marginBottom:16 }}>
+          <a href="/verification/pay" style={{ fontSize:13, color:'#b8962e', border:'1px solid rgba(184,150,46,0.3)', padding:'8px 16px', borderRadius:6, textDecoration:'none' }}>Apply for Verification</a>
+          <a href="/analytics" style={{ fontSize:13, color:'#b8962e', border:'1px solid rgba(184,150,46,0.3)', padding:'8px 16px', borderRadius:6, textDecoration:'none' }}>View Analytics</a>
+        </div>
         <div style={{ textAlign: 'center', marginTop: 8 }}>
           <Link to="/pricing" style={{ color: '#b8962e', fontSize: 14 }}>View all plans →</Link>
         </div>

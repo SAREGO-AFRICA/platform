@@ -30,6 +30,9 @@ import ConversationsPage from './pages/ConversationsPage.jsx';
 import ConversationThreadPage from './pages/ConversationThreadPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
+import AnalyticsDashboard from './pages/AnalyticsDashboard.jsx';
+import VerificationPaymentPage from './pages/VerificationPaymentPage.jsx';
+import TradeFinanceListingFeePage from './pages/TradeFinanceListingFeePage.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -73,6 +76,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/conversations/:id" element={<ConversationThreadPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/account" element={<AccountPage />} />
+        <Route path="/analytics" element={<AnalyticsDashboard />} />
+        <Route path="/verification/pay" element={<VerificationPaymentPage />} />
+        <Route path="/trade-finance/boost" element={<TradeFinanceListingFeePage />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

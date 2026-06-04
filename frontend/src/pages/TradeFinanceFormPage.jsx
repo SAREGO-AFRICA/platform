@@ -28,7 +28,15 @@ const FINANCE_TYPES = [
   { value: 'working_capital',  label: 'Working Capital',         hint: 'Operating liquidity to fulfill contracts, tender awards, or production cycles.' },
   { value: 'invoice_finance',  label: 'Invoice / Receivables',   hint: 'Advance cash against unpaid invoices. Useful for suppliers, logistics providers, government contractors.' },
   { value: 'purchase_order',   label: 'Purchase Order Finance',  hint: 'Finance fulfillment of confirmed purchase orders or procurement awards.' },
-  { value: 'lc_facilitation',  label: 'LC Facilitation',         hint: 'Connect with institutions for letter of credit issuance or confirmation. Cross-border trade assurance.' },
+  { value: 'lc_facilitation',          label: 'LC Facilitation',          hint: 'Connect with institutions for letter of credit issuance or confirmation.' },
+  { value: 'supply_chain_finance',     label: 'Supply Chain Finance',     hint: 'Finance supply chain operations including procurement and distribution.' },
+  { value: 'structured_trade_finance', label: 'Structured Trade Finance', hint: 'Complex multi-party trade finance for large commodity transactions.' },
+  { value: 'commodity_finance',        label: 'Commodity Finance',        hint: 'Finance commodity purchases, storage and sales.' },
+  { value: 'inventory_finance',        label: 'Inventory Finance',        hint: 'Finance inventory holdings using stock as collateral.' },
+  { value: 'project_finance',          label: 'Project Finance',          hint: 'Long-term financing for infrastructure or industrial projects.' },
+  { value: 'infrastructure_finance',   label: 'Infrastructure Finance',   hint: 'Finance construction of roads, energy, water and social infrastructure.' },
+  { value: 'ppp_finance',              label: 'PPP Finance',              hint: 'Public-private partnership financing for government projects.' },
+  { value: 'development_finance',      label: 'Development Finance',      hint: 'Concessional financing for economic development projects.' },
 ];
 
 const SECTORS = [

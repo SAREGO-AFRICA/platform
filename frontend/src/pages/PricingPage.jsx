@@ -129,6 +129,12 @@ export default function PricingPage() {
 
   return (
     <div style={s.page}>
+      <div style={{ background:'#0d0f13', borderBottom:'1px solid rgba(184,150,46,0.15)', padding:'12px 24px', display:'flex', alignItems:'center', gap:16 }}>
+        <a href="/" style={{ display:'flex', alignItems:'center', gap:8, textDecoration:'none' }}><span style={{ color:'#b8962e', fontSize:18 }}>◈</span><span style={{ color:'#e8e0d0', fontSize:14, fontWeight:600, letterSpacing:'0.05em' }}>SAREGO</span></a>
+        <span style={{ color:'rgba(232,224,208,0.2)' }}>|</span>
+        <a href="/dashboard" style={{ color:'rgba(232,224,208,0.5)', fontSize:13, textDecoration:'none' }}>Dashboard</a>
+        <a href="/account" style={{ color:'rgba(232,224,208,0.5)', fontSize:13, textDecoration:'none', marginLeft:'auto' }}>My Account</a>
+      </div>
       <div style={s.hdr}>
         <h1 style={s.title}>Institutional Access</h1>
         <p style={s.sub}>Monetize your participation in SADC economic activity</p>

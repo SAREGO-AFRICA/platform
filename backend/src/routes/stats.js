@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { query } from '../db/index.js';
 import { asyncHandler } from '../middleware/errors.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -133,5 +134,21 @@ router.get(
     res.json(_cached);
   })
 );
+
+
+router.get('/analytics', requireAuth, asyncHandler(async (req, res) => {
+  const { rows: [m] } = await query('SELECT tier FROM memberships WHERE user_id = $1', [req.user.id]);
+  const userTier = m?.tier || 'free';
+  if (userTier === 'free') return res.status(403).json({ error: 'Premium analytics requires Verified Business or higher membership.', upgrade_url: '/pricing' });
+  const isAdvanced = ['institutional','enterprise'].includes(userTier);
+  const [s1,s2,s3,s4,s5] = await Promise.all([
+    query(`SELECT sector::text, COUNT(*)::int as count, SUM(value_usd)::bigint as total_value FROM (SELECT sector, value_usd FROM commodity_requests WHERE status='published' AND sector IS NOT NULL UNION ALL SELECT sector, value_usd FROM logistics_loads WHERE status='published' AND sector IS NOT NULL UNION ALL SELECT sector, value_usd FROM agri_offtake_requests WHERE status='published' AND sector IS NOT NULL UNION ALL SELECT sector, value_usd FROM tenders WHERE status='published' AND sector IS NOT NULL UNION ALL SELECT sector, value_usd FROM trade_finance_requests WHERE status='published' AND sector IS NOT NULL) t GROUP BY sector ORDER BY count DESC`),
+    query(`SELECT country_iso, COUNT(*)::int as opportunities, SUM(value_usd)::bigint as total_value FROM (SELECT country_iso, value_usd FROM commodity_requests WHERE status='published' UNION ALL SELECT country_iso, value_usd FROM logistics_loads WHERE status='published' UNION ALL SELECT country_iso, value_usd FROM agri_offtake_requests WHERE status='published' UNION ALL SELECT country_iso, value_usd FROM tenders WHERE status='published' UNION ALL SELECT country_iso, value_usd FROM trade_finance_requests WHERE status='published') t GROUP BY country_iso ORDER BY opportunities DESC LIMIT 15`),
+    query(`SELECT finance_type::text, COUNT(*)::int as count, SUM(value_usd)::bigint as total_value FROM trade_finance_requests WHERE status='published' AND finance_type IS NOT NULL GROUP BY finance_type ORDER BY count DESC`),
+    query(`SELECT DATE(created_at) as date, COUNT(*)::int as interests FROM opportunity_interests WHERE created_at > now() - interval '30 days' GROUP BY DATE(created_at) ORDER BY date ASC`),
+    isAdvanced ? query(`SELECT tier, COUNT(*)::int as count FROM memberships GROUP BY tier ORDER BY count DESC`) : Promise.resolve({ rows: [] }),
+  ]);
+  res.json({ tier: userTier, is_advanced: isAdvanced, sector_trends: s1.rows, country_activity: s2.rows, finance_type_demand: s3.rows, interest_activity: s4.rows, membership_stats: isAdvanced ? s5.rows : null, generated_at: new Date().toISOString() });
+}));
 
 export default router;
