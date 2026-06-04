@@ -50,6 +50,16 @@ export default function InvestorDashboard() {
   const [myProjects, setMyProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [membership, setMembership] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('sarego_access');
+    if (!token) return;
+    fetch('/api/memberships/me', { headers: { Authorization: 'Bearer ' + token } })
+      .then(r => r.json())
+      .then(d => setMembership(d.membership))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!getAccessToken()) {
@@ -118,12 +128,6 @@ export default function InvestorDashboard() {
   }
 
   const tier = TIER_COPY[user.trust_tier] || TIER_COPY.unverified;
-  const [membership, setMembership] = React.useState(null);
-  React.useEffect(() => {
-    import('../lib/api').then(({ api }) => {
-      api('/api/memberships/me').then(d => setMembership(d.membership)).catch(() => {});
-    });
-  }, []);
 
   return (
     <div style={{ background: 'var(--ivory-50)', minHeight: '100vh' }}>
