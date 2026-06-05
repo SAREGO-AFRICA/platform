@@ -35,7 +35,7 @@ function VerificationsTab() {
   async function approve(id) { const {api} = await import('../lib/api'); await api('/api/admin/verifications/'+id+'/approve', {method:'PATCH'}); setOrders(p => p.map(o => o.id===id?{...o,status:'approved'}:o)); }
   async function reject(id) { const note = prompt('Rejection reason:'); if (!note) return; const {api} = await import('../lib/api'); await api('/api/admin/verifications/'+id+'/reject', {method:'PATCH',body:JSON.stringify({notes:note})}); setOrders(p => p.map(o => o.id===id?{...o,status:'rejected'}:o)); }
   const SC = { pending:'#f59e0b', approved:'#22c55e', rejected:'#ef4444', paid:'#22c55e' };
-  return (<div><h3 style={{ marginBottom:16 }}>Verification Orders</h3>{orders.length===0&&<div style={{ color:'#888' }}>No verification orders yet.</div>}<table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}><thead><tr style={{ borderBottom:'1px solid rgba(255,255,255,0.1)', textAlign:'left' }}><th style={{ padding:'8px 12px', color:'#b8962e' }}>User</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Type</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Amount</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Status</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Actions</th></tr></thead><tbody>{orders.map(o => (<tr key={o.id} style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }}><td style={{ padding:'8px 12px' }}>{o.user_email||o.user_id?.slice(0,8)}</td><td style={{ padding:'8px 12px' }}>{o.verification_type}</td><td style={{ padding:'8px 12px' }}>${o.amount_usd}</td><td style={{ padding:'8px 12px' }}><span style={{ color:SC[o.status]||'#888', fontWeight:600 }}>{o.status}</span></td><td style={{ padding:'8px 12px', display:'flex', gap:6 }}>{(o.status==='pending'||o.status==='paid')&&(<><button onClick={()=>approve(o.id)} style={{ background:'#22c55e', color:'#0b0d10', border:'none', borderRadius:4, padding:'3px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>Approve</button><button onClick={()=>reject(o.id)} style={{ background:'#ef4444', color:'#fff', border:'none', borderRadius:4, padding:'3px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>Reject</button></>)}</td></tr>))}</tbody></table></div>);
+  return (<div><h3 style={{ marginBottom:16 }}>Verification Orders</h3>{orders.length===0&&<div style={{ color:'#888' }}>No verification orders yet.</div>}<table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}><thead><tr style={{ borderBottom:'1px solid rgba(255,255,255,0.1)', textAlign:'left' }}><th style={{ padding:'8px 12px', color:'#b8962e' }}>User</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Type</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Amount</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Status</th><th style={{ padding:'8px 12px', color:'#b8962e' }}>Actions</th></tr></thead><tbody>{orders.map(o => (<tr key={o.id} style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }}><td style={{ padding:'8px 12px' }}>{o.user_email||o.user_id?.slice(0,8)}</td><td style={{ padding:'8px 12px' }}>{o.verification_type}</td><td style={{ padding:'8px 12px' }}>${o.amount_usd}</td><td style={{ padding:'8px 12px' }}><span style={{ color:SC[o.status]||'#888', fontWeight:600 }}>{o.status}</span></td><td style={{ padding:'8px 12px', display:'flex', gap:6 }}>{(o.status==='pending'||o.status==='paid')&&(<><button onClick={()=>approve(o.id)} style={{ background:'#22c55e', color:'#f5f0e8', border:'none', borderRadius:4, padding:'3px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>Approve</button><button onClick={()=>reject(o.id)} style={{ background:'#ef4444', color:'#fff', border:'none', borderRadius:4, padding:'3px 10px', fontSize:11, fontWeight:700, cursor:'pointer' }}>Reject</button></>)}</td></tr>))}</tbody></table></div>);
 }
 const TABS = [
   { id: 'overview', label: 'Overview',     icon: TrendingUp },
@@ -1663,7 +1663,7 @@ function ListingsTab() {
           disabled={purgeState === 'submitting' || purgeState === 'done'}
           className="btn"
           style={{
-            background: purgeState === 'confirming' ? 'rgba(201,123,123,0.15)' : 'rgba(255,255,255,0.05)',
+            background: purgeState === 'confirming' ? 'rgba(201,123,123,0.15)' : 'rgba(0,0,0,0.06)',
             border: `1px solid ${purgeState === 'confirming' ? 'rgba(201,123,123,0.5)' : 'rgba(255,255,255,0.12)'}`,
             color: purgeState === 'confirming' ? '#e2a4a4' : 'var(--ivory-50)',
             fontSize: 12,
@@ -1760,7 +1760,7 @@ function FilterBtn({ label, active, onClick, color }) {
       style={{
         padding: '6px 12px',
         background: active ? 'rgba(220,192,104,0.12)' : 'rgba(255,255,255,0.04)',
-        border: `1px solid ${active ? 'rgba(220,192,104,0.4)' : 'rgba(255,255,255,0.08)'}`,
+        border: `1px solid ${active ? 'rgba(220,192,104,0.4)' : 'rgba(0,0,0,0.1)'}`,
         color: active ? 'var(--gold-400)' : 'rgba(255,255,255,0.7)',
         borderRadius: 999, fontSize: 12, cursor: 'pointer',
       }}
@@ -1816,7 +1816,7 @@ function ListingAdminRow({ listing, type, closingState, onForceClose }) {
             style={{
               padding: '5px 10px',
               background: isConfirming ? 'rgba(201,123,123,0.15)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${isConfirming ? 'rgba(201,123,123,0.5)' : 'rgba(255,255,255,0.1)'}`,
+              border: `1px solid ${isConfirming ? 'rgba(201,123,123,0.5)' : 'rgba(0,0,0,0.12)'}`,
               color: isConfirming ? '#e2a4a4' : 'rgba(255,255,255,0.7)',
               borderRadius: 4, fontSize: 11, cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', gap: 4,

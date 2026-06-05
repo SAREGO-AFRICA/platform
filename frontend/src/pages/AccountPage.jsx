@@ -28,16 +28,16 @@ export default function AccountPage() {
   }, []);
 
   const s = {
-    page:  { minHeight: '100vh', background: '#0b0d10', color: '#e8e0d0', fontFamily: "'Inter Tight', sans-serif", padding: '40px 24px' },
+    page:  { minHeight: '100vh', background: '#f5f0e8', color: '#f0ebe0', fontFamily: "'Inter Tight', sans-serif", padding: '40px 24px' },
     inner: { maxWidth: 760, margin: '0 auto' },
     title: { fontSize: 28, fontWeight: 700, margin: '0 0 32px' },
-    card:  { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(184,150,46,0.15)', borderRadius: 12, padding: 24, marginBottom: 20 },
+    card:  { background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(184,150,46,0.15)', borderRadius: 12, padding: 24, marginBottom: 20 },
     lbl:   { fontSize: 10, color: '#b8962e', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6, fontWeight: 600 },
-    val:   { fontSize: 16, fontWeight: 500, color: '#e8e0d0' },
+    val:   { fontSize: 16, fontWeight: 500, color: '#f0ebe0' },
     badge: (color) => ({ display: 'inline-block', padding: '4px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, color, border: `1px solid ${color}`, background: color + '18' }),
     row:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' },
     feat:  (on) => ({ fontSize: 13, color: on ? '#22c55e' : 'rgba(232,224,208,0.35)', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0' }),
-    btn:   { background: '#b8962e', color: '#0b0d10', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' },
+    btn:   { background: '#b8962e', color: '#f5f0e8', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'none', display: 'inline-block' },
   };
 
   function fmt(d) { return d ? new Date(d).toLocaleDateString(undefined, { dateStyle: 'medium' }) : '—'; }
@@ -62,7 +62,7 @@ export default function AccountPage() {
                 <span style={{ fontSize: 22, fontWeight: 700 }}>{meta.label}</span>
                 <span style={s.badge(meta.color)}>{tier.replace('_', ' ').toUpperCase()}</span>
               </div>
-              <div style={{ fontSize: 13, color: 'rgba(232,224,208,0.5)', marginTop: 4 }}>{meta.desc}</div>
+              <div style={{ fontSize: 13, color: 'rgba(26,26,26,0.55)', marginTop: 4 }}>{meta.desc}</div>
             </div>
             <Link to="/pricing" style={s.btn}>Upgrade Plan</Link>
           </div>
@@ -99,12 +99,12 @@ export default function AccountPage() {
         {/* Billing history */}
         <div style={s.card}>
           <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Billing History</div>
-          {billing.length === 0 && <div style={{ color: 'rgba(232,224,208,0.4)', fontSize: 13 }}>No billing records yet.</div>}
+          {billing.length === 0 && <div style={{ color: 'rgba(26,26,26,0.45)', fontSize: 13 }}>No billing records yet.</div>}
           {billing.map(r => (
             <div key={r.id} style={s.row}>
               <div>
                 <div style={{ fontSize: 14 }}>{r.description}</div>
-                <div style={{ fontSize: 11, color: 'rgba(232,224,208,0.4)', marginTop: 2 }}>{fmt(r.created_at)} · {r.record_type.replace('_', ' ')}</div>
+                <div style={{ fontSize: 11, color: 'rgba(26,26,26,0.45)', marginTop: 2 }}>{fmt(r.created_at)} · {r.record_type.replace('_', ' ')}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 15, fontWeight: 600 }}>{fmtUSD(r.amount_usd)}</div>
