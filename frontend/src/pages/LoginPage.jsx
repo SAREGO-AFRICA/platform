@@ -239,8 +239,6 @@ function LoginForm() {
 }
 
 function RegisterForm({ onDone }) {
-  const [searchParams] = useSearchParams();
-  const refCode = searchParams.get('ref') || sessionStorage.getItem('sarego_ref') || '';
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -266,13 +264,6 @@ function RegisterForm({ onDone }) {
         method: 'POST',
         body: JSON.stringify(form),
       });
-      // Track referral if ref code present
-      if (refCode) {
-        try {
-          await api('/api/partners/track-referral', { method: 'POST', body: JSON.stringify({ referral_code: refCode, referred_email: form.email }) });
-          sessionStorage.removeItem('sarego_ref');
-        } catch(_) {}
-      }
       setSuccess(true);
       setTimeout(() => onDone(), 1800);
     } catch (err) {
