@@ -185,7 +185,7 @@ router.get('/corridor/:origin/:destination', asyncHandler(async (req, res) => {
   const [logistics, tradeFinance, commodity, summary] = await Promise.all([
     query(`SELECT id, title, value_usd, cargo_type, weight_tons, load_date, origin_city, destination_city, published_at FROM logistics_loads WHERE status='published' AND origin_country_iso=$1 AND destination_country_iso=$2 ORDER BY published_at DESC LIMIT 20`, [o, d]),
     query(`SELECT id, title, value_usd, finance_type, sector, published_at FROM trade_finance_requests WHERE status='published' AND country_iso=$1 AND destination_country_iso=$2 ORDER BY published_at DESC LIMIT 20`, [o, d]),
-    query(`SELECT id, title, value_usd, commodity, sector, published_at FROM commodity_requests WHERE status='published' AND country_iso=$1 AND destination_country_iso=$2 ORDER BY published_at DESC LIMIT 20`, [o, d]),
+    Promise.resolve({ rows: [] }),
     query(`
       SELECT COUNT(*)::int AS total_flows, SUM(value_usd)::bigint AS total_value
       FROM (
