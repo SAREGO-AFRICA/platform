@@ -11,17 +11,17 @@
   --ink-900: #11141a;          /* cards on dark */
   --ink-800: #1a1f28;          /* hovers, dividers on dark */
   --ink-700: #262d39;          /* outlines on dark */
-  --ink-500: #4a5468;          /* muted text on dark */
-  --ink-300: #9aa3b2;          /* subtle text on dark */
+  --ink-500: #606878;          /* muted text on dark */
+  --ink-300: #b0bac8;          /* subtle text on dark */
 
   --ivory-50:  #faf6ee;        /* page background, light surface */
   --ivory-100: #f3ecdc;        /* card background light */
   --ivory-200: #e8dcc1;        /* dividers light */
 
-  --gold-700: #8a6d2c;         /* deep accent */
-  --gold-600: #b08a3a;         /* primary gold */
-  --gold-500: #c9a74a;         /* hover gold */
-  --gold-400: #dcc068;         /* soft highlight */
+  --gold-700: #a07d32;         /* deep accent */
+  --gold-600: #c9a03e;         /* primary gold */
+  --gold-500: #dbb84e;         /* hover gold */
+  --gold-400: #e8cc78;         /* soft highlight */
   --gold-200: #ecdca4;         /* tint */
 
   --sage-700: #4a5d4f;         /* secondary muted accent (verification, success) */
@@ -31,7 +31,7 @@
   --bg:           var(--ivory-50);
   --bg-elev:     #ffffff;
   --fg:           var(--ink-950);
-  --fg-muted:     #5a6473;
+  --fg-muted:     #7a8494;
   --border:       var(--ivory-200);
   --accent:       var(--gold-600);
   --accent-hover: var(--gold-500);
@@ -65,7 +65,9 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 16.5px;
+  font-weight: 420;
+  font-weight: 420;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
