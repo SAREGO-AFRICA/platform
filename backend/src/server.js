@@ -19,6 +19,9 @@ import capitalProvidersRoutes from './routes/capital-providers.js';
 import opportunitiesRoutes from './routes/opportunities.js';
 import listingInterestRoutes from './routes/listing-interest.js';
 import conversationRoutes from './routes/conversations.js';
+import membershipsRoutes from './routes/memberships.js';
+import billingRoutes from './routes/billing.js';
+import partnerRoutes from './routes/partners.js';
 import { errorMiddleware } from './middleware/errors.js';
 
 const app = express();
@@ -52,6 +55,9 @@ app.use('/api/opportunities', opportunitiesRoutes);
 app.use('/api/my-listings', listingInterestRoutes);
 app.use('/api/capital-providers', capitalProvidersRoutes);
 app.use('/api/conversations', conversationRoutes);
+app.use('/api/memberships', membershipsRoutes);
+app.use('/api/billing', billingRoutes);
+app.use('/api/partners', partnerRoutes);
 
 app.use(errorMiddleware);
 
