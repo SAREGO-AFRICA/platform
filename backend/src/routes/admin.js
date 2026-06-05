@@ -529,4 +529,106 @@ router.patch('/verifications/:id/reject', requireAuth, asyncHandler(async (req, 
   res.json({ order });
 }));
 
+
+// ── GET /api/admin/partners ──────────────────────────────────────────
+router.get('/partners', requireAuth, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') throw new HttpError(403, 'Admin only');
+  const { rows } = await query(
+    `SELECT p.*, u.email AS user_email, u.full_name AS user_name
+     FROM partner_profiles p JOIN users u ON u.id = p.user_id
+     ORDER BY p.lifetime_referrals DESC, p.created_at DESC LIMIT 200`
+  );
+  res.json({ partners: rows });
+}));
+
+// ── GET /api/admin/partner-commissions ───────────────────────────────
+router.get('/partner-commissions', requireAuth, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') throw new HttpError(403, 'Admin only');
+  const { status } = req.query;
+  let sql = `SELECT c.*, u.email AS partner_email, u.full_name AS partner_name
+             FROM partner_commissions c JOIN users u ON u.id = c.partner_user_id`;
+  const params = [];
+  if (status) { sql += ` WHERE c.status=$1`; params.push(status); }
+  sql += ` ORDER BY c.created_at DESC LIMIT 500`;
+  const { rows } = await query(sql, params);
+  res.json({ commissions: rows });
+}));
+
+// ── PATCH /api/admin/partner-commissions/:id/approve ─────────────────
+router.patch('/partner-commissions/:id/approve', requireAuth, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') throw new HttpError(403, 'Admin only');
+  const { rows: [c] } = await query(
+    `UPDATE partner_commissions SET status='approved', approved_at=now() WHERE id=$1 RETURNING *`,
+    [req.params.id]
+  );
+  if (!c) throw new HttpError(404, 'Commission not found');
+  // Update partner pending/approved totals
+  await query(
+    `UPDATE partner_profiles SET pending_commissions=GREATEST(0,pending_commissions-$1), updated_at=now() WHERE user_id=$2`,
+    [c.commission_amount, c.partner_user_id]
+  );
+  res.json({ commission: c });
+}));
+
+// ── PATCH /api/admin/partner-commissions/:id/pay ─────────────────────
+router.patch('/partner-commissions/:id/pay', requireAuth, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') throw new HttpError(403, 'Admin only');
+  const { rows: [c] } = await query(
+    `UPDATE partner_commissions SET status='paid', paid_at=now() WHERE id=$1 AND status='approved' RETURNING *`,
+    [req.params.id]
+  );
+  if (!c) throw new HttpError(404, 'Commission not found or not approved');
+  await query(
+    `UPDATE partner_profiles SET paid_commissions=paid_commissions+$1, lifetime_commissions=lifetime_commissions+$1, updated_at=now() WHERE user_id=$2`,
+    [c.commission_amount, c.partner_user_id]
+  );
+  res.json({ commission: c });
+}));
+
+// ── POST /api/admin/partner-commissions ──────────────────────────────
+// Admin manually creates a commission when marking billing record as paid
+router.post('/partner-commissions', requireAuth, asyncHandler(async (req, res) => {
+  if (req.user.role !== 'admin') throw new HttpError(403, 'Admin only');
+  const { billing_record_id, revenue_type, gross_amount } = req.body || {};
+  if (!billing_record_id || !revenue_type || !gross_amount) {
+    throw new HttpError(400, 'billing_record_id, revenue_type, gross_amount required');
+  }
+
+  // Find the billing record
+  const { rows: [billing] } = await query('SELECT * FROM billing_records WHERE id=$1', [billing_record_id]);
+  if (!billing) throw new HttpError(404, 'Billing record not found');
+
+  // Find referral for this user
+  const { rows: [referral] } = await query(
+    `SELECT r.*, p.user_id AS partner_user_id FROM partner_referrals r
+     JOIN partner_profiles p ON p.user_id = r.referrer_user_id
+     WHERE r.referred_user_id=$1 AND r.status IN ('registered','verified','active','commissionable')
+     ORDER BY r.created_at ASC LIMIT 1`,
+    [billing.user_id]
+  );
+  if (!referral) return res.status(404).json({ error: 'No partner referral found for this user' });
+
+  // Commission rates
+  const RATES = { subscription:20, verification:20, featured_listing:20, analytics:20, facilitation_fee:10 };
+  const pct = RATES[revenue_type] || 20;
+  const commission_amount = (Number(gross_amount) * pct / 100).toFixed(2);
+
+  const { rows: [commission] } = await query(
+    `INSERT INTO partner_commissions (partner_user_id, referral_id, billing_record_id, revenue_type, source_entity_id, gross_amount, commission_percentage, commission_amount, status, revenue_recognized_at, commission_created_at)
+     VALUES ($1,$2,$3,$4::partner_revenue_type,$5,$6,$7,$8,'pending',now(),now()) RETURNING *`,
+    [referral.partner_user_id, referral.id, billing_record_id, revenue_type, billing.id, gross_amount, pct, commission_amount]
+  );
+
+  // Update partner pending commissions
+  await query(
+    `UPDATE partner_profiles SET pending_commissions=pending_commissions+$1, updated_at=now() WHERE user_id=$2`,
+    [commission_amount, referral.partner_user_id]
+  );
+
+  // Update referral status to commissionable
+  await query(`UPDATE partner_referrals SET status='commissionable', updated_at=now() WHERE id=$1`, [referral.id]);
+
+  res.status(201).json({ commission });
+}));
+
 export default router;

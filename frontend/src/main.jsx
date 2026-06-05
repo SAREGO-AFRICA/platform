@@ -31,6 +31,7 @@ import ConversationThreadPage from './pages/ConversationThreadPage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
 import AnalyticsDashboard from './pages/AnalyticsDashboard.jsx';
+import PartnersPage from './pages/PartnersPage.jsx';
 import CorridorsIndexPage from './pages/CorridorsIndexPage.jsx';
 import CorridorDetailPage from './pages/CorridorDetailPage.jsx';
 import VerificationPaymentPage from './pages/VerificationPaymentPage.jsx';
@@ -79,6 +80,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/account" element={<AccountPage />} />
         <Route path="/analytics" element={<AnalyticsDashboard />} />
+        <Route path="/partners" element={<PartnersPage />} />
         <Route path="/corridors" element={<CorridorsIndexPage />} />
         <Route path="/corridors/:id" element={<CorridorDetailPage />} />
         <Route path="/verification/pay" element={<VerificationPaymentPage />} />
