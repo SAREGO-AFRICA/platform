@@ -73,7 +73,7 @@ export default function CorridorsIndexPage() {
                 <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(184,150,46,0.15)', borderRadius:12, padding:20, transition:'border-color 0.2s', position:'relative' }}
                   onMouseEnter={e => e.currentTarget.style.borderColor='rgba(184,150,46,0.4)'}
                   onMouseLeave={e => e.currentTarget.style.borderColor='rgba(184,150,46,0.15)'}>
-                  {isDomestic && <span style={{ position:'absolute', top:12, right:12, fontSize:9, padding:'2px 8px', borderRadius:8, background:'rgba(255,255,255,0.06)', color:'rgba(232,224,208,0.4)', textTransform:'uppercase', letterSpacing:'0.08em' }}>Domestic</span>}
+                  <span style={{ position:'absolute', top:12, right:12, fontSize:9, padding:'2px 8px', borderRadius:8, background: isDomestic ? 'rgba(255,255,255,0.06)' : 'rgba(34,197,94,0.1)', color: isDomestic ? 'rgba(232,224,208,0.4)' : '#22c55e', textTransform:'uppercase', letterSpacing:'0.08em', border: isDomestic ? 'none' : '1px solid rgba(34,197,94,0.3)' }}>{isDomestic ? 'Domestic' : 'Regional'}</span>
                   <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
                     <span style={{ fontSize:18, fontWeight:700, color:'#b8962e' }}>{c.origin}</span>
                     <span style={{ color:'rgba(232,224,208,0.3)', fontSize:14 }}>→</span>
