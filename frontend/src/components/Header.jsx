@@ -71,6 +71,7 @@ export default function Header({ variant = 'light' }) {
     { href: '/provider/browse', label: 'Capital Opportunities' },
     { href: '/#marketplace',  label: t('header.nav.marketplace') },
     { href: '/trade-hub',     label: t('header.nav.tradeHub') },
+    { href: '/corridors',      label: 'Corridors' },
     { href: '/governments',   label: t('header.nav.forGovernments') },
     { href: '/investors',     label: t('header.nav.forInvestors') },
   ];
