@@ -299,7 +299,7 @@ function FilterSelect({ label, value, onChange, options }) {
         }}
       >
         {options.map(opt => (
-          <option key={opt.value} value={opt.value} style={{ background: '#f5f0e8' }}>
+          <option key={opt.value} value={opt.value} style={{ background: '#0b0d10' }}>
             {opt.label}
           </option>
         ))}
@@ -508,7 +508,7 @@ export default function OpportunitiesPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#f5f0e8',
+      background: '#0b0d10',
       color: '#fff',
       display: 'flex',
       flexDirection: 'column',

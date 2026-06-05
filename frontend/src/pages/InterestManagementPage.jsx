@@ -360,7 +360,7 @@ function InterestCard({ interest, onAction, busy, listingType, listingId, onRefr
   return (
     <div style={{
       background: 'rgba(20, 22, 26, 0.6)',
-      border: `1px solid ${interest.status === 'awarded' ? meta?.border : 'rgba(0,0,0,0.07)'}`,
+      border: `1px solid ${interest.status === 'awarded' ? meta?.border : 'rgba(255,255,255,0.06)'}`,
       borderRadius: 12,
       padding: 20,
     }}>
@@ -565,7 +565,7 @@ function SummaryTiles({ counts, listingStatus }) {
           <div key={tile.key} style={{
             padding: 16,
             background: 'rgba(20, 22, 26, 0.6)',
-            border: `1px solid ${count > 0 ? meta.border : 'rgba(0,0,0,0.07)'}`,
+            border: `1px solid ${count > 0 ? meta.border : 'rgba(255,255,255,0.06)'}`,
             borderRadius: 10,
           }}>
             <div style={{ fontSize: 28, fontWeight: 600, color: count > 0 ? meta.color : 'rgba(255,255,255,0.3)' }}>
@@ -662,7 +662,7 @@ function IndicativeResponsePanel({ interest, listingType, listingId, onRefresh }
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div>
             <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>RESPONSE TYPE</div>
-            <select value={type} onChange={e => setType(e.target.value)} style={{ background: '#f0ebe0', color: '#f0ebe0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%' }}>
+            <select value={type} onChange={e => setType(e.target.value)} style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%' }}>
               <option value="accepted">Accept indicative terms</option>
               <option value="countered">Counter with different terms</option>
               <option value="clarification_requested">Request clarification</option>
@@ -670,28 +670,28 @@ function IndicativeResponsePanel({ interest, listingType, listingId, onRefresh }
           </div>
           <div>
             <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>NOTE (optional)</div>
-            <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note to your response..." style={{ background: '#f0ebe0', color: '#f0ebe0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', minHeight: 60, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+            <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note to your response..." style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', minHeight: 60, resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
           </div>
           {type === 'countered' && (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div>
                   <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>COUNTER AMOUNT (USD)</div>
-                  <input type="number" value={cAmount} onChange={e => setCAmount(e.target.value)} placeholder="e.g. 5000000" style={{ background: '#f0ebe0', color: '#f0ebe0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
+                  <input type="number" value={cAmount} onChange={e => setCAmount(e.target.value)} placeholder="e.g. 5000000" style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
                 </div>
                 <div>
                   <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>COUNTER RATE RANGE</div>
-                  <input value={cRate} onChange={e => setCRate(e.target.value)} placeholder="e.g. 8-10% p.a." style={{ background: '#f0ebe0', color: '#f0ebe0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
+                  <input value={cRate} onChange={e => setCRate(e.target.value)} placeholder="e.g. 8-10% p.a." style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div>
                   <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>COUNTER TENOR</div>
-                  <input value={cTenor} onChange={e => setCTenor(e.target.value)} placeholder="e.g. 36 months" style={{ background: '#f0ebe0', color: '#f0ebe0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
+                  <input value={cTenor} onChange={e => setCTenor(e.target.value)} placeholder="e.g. 36 months" style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
                 </div>
                 <div>
                   <div style={{ fontSize: 10, color: '#888', marginBottom: 4 }}>COUNTER CONDITIONS</div>
-                  <input value={cCond} onChange={e => setCCond(e.target.value)} placeholder="e.g. Security required" style={{ background: '#f0ebe0', color: '#f0ebe0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
+                  <input value={cCond} onChange={e => setCCond(e.target.value)} placeholder="e.g. Security required" style={{ background: '#1a1a1a', color: '#e8e0d0', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', fontSize: 12, width: '100%', boxSizing: 'border-box' }} />
                 </div>
               </div>
             </>
@@ -812,7 +812,7 @@ export default function InterestManagementPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#f5f0e8',
+      background: '#0b0d10',
       color: '#fff',
       display: 'flex',
       flexDirection: 'column',
@@ -862,7 +862,7 @@ export default function InterestManagementPage() {
               <span>Listing status:</span>
               <span style={{
                 padding: '2px 8px', borderRadius: 4,
-                background: data.listing.status === 'fulfilled' ? 'rgba(132, 204, 22, 0.15)' : 'rgba(0,0,0,0.1)',
+                background: data.listing.status === 'fulfilled' ? 'rgba(132, 204, 22, 0.15)' : 'rgba(255,255,255,0.08)',
                 color: data.listing.status === 'fulfilled' ? '#84cc16' : 'rgba(255,255,255,0.7)',
                 textTransform: 'uppercase', fontSize: 11, fontWeight: 600, letterSpacing: 0.3,
               }}>
