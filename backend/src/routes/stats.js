@@ -164,10 +164,10 @@ router.get('/corridors', asyncHandler(async (req, res) => {
       array_agg(DISTINCT type) AS types
     FROM (
       SELECT origin_country_iso AS origin, destination_country_iso AS destination, value_usd, 'logistics' AS type
-      FROM logistics_loads WHERE status='published' AND destination_country_iso IS NOT NULL AND origin_country_iso IS NOT NULL AND origin_country_iso != destination_country_iso
+      FROM logistics_loads WHERE status='published' AND destination_country_iso IS NOT NULL AND origin_country_iso IS NOT NULL
       UNION ALL
       SELECT country_iso AS origin, destination_country_iso AS destination, value_usd, 'trade_finance' AS type
-      FROM trade_finance_requests WHERE status='published' AND destination_country_iso IS NOT NULL AND country_iso IS NOT NULL AND country_iso != destination_country_iso
+      FROM trade_finance_requests WHERE status='published' AND destination_country_iso IS NOT NULL AND country_iso IS NOT NULL
     ) t
     GROUP BY origin, destination
     ORDER BY flow_count DESC, total_value DESC
