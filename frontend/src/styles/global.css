@@ -7,21 +7,21 @@
 
 :root {
   /* Core palette */
-  --ink-950: #0b0d10;          /* deepest background */
-  --ink-900: #11141a;          /* cards on dark */
-  --ink-800: #1a1f28;          /* hovers, dividers on dark */
-  --ink-700: #262d39;          /* outlines on dark */
-  --ink-500: #606878;          /* muted text on dark */
-  --ink-300: #b0bac8;          /* subtle text on dark */
+  --ink-950: #0f1218;          /* deepest background */
+  --ink-900: #161b24;          /* cards on dark */
+  --ink-800: #222836;          /* hovers, dividers on dark */
+  --ink-700: #2e3848;          /* outlines on dark */
+  --ink-500: #7a8494;          /* muted text on dark */
+  --ink-300: #c8d0dc;          /* subtle text on dark */
 
   --ivory-50:  #faf6ee;        /* page background, light surface */
   --ivory-100: #f3ecdc;        /* card background light */
   --ivory-200: #e8dcc1;        /* dividers light */
 
-  --gold-700: #a07d32;         /* deep accent */
-  --gold-600: #c9a03e;         /* primary gold */
-  --gold-500: #dbb84e;         /* hover gold */
-  --gold-400: #e8cc78;         /* soft highlight */
+  --gold-700: #c49a3c;         /* deep accent */
+  --gold-600: #e8b84b;         /* primary gold */
+  --gold-500: #f0cc5a;         /* hover gold */
+  --gold-400: #f5da80;         /* soft highlight */
   --gold-200: #ecdca4;         /* tint */
 
   --sage-700: #4a5d4f;         /* secondary muted accent (verification, success) */
@@ -31,7 +31,7 @@
   --bg:           var(--ivory-50);
   --bg-elev:     #ffffff;
   --fg:           var(--ink-950);
-  --fg-muted:     #7a8494;
+  --fg-muted:     #9aa8b8;
   --border:       var(--ivory-200);
   --accent:       var(--gold-600);
   --accent-hover: var(--gold-500);
@@ -66,8 +66,8 @@ body {
   color: var(--fg);
   font-family: var(--font-body);
   font-size: 16.5px;
-  font-weight: 420;
-  font-weight: 420;
+  font-weight: 450;
+  font-weight: 450;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -321,3 +321,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
+
+/* ── Dark page brightness boost ── */
+[style*="background:#0b0d10"], [style*="background: #0b0d10"] {
+  color: #e8e0d0;
+}
+.muted { color: #8a9ab0 !important; }
