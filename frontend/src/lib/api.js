@@ -46,6 +46,12 @@ export async function api(path, options = {}) {
       });
       if (!retry.ok) throw await asError(retry);
       return retry.json();
+    } else {
+      // Refresh failed — clear session and redirect to login
+      setAccessToken(null);
+      localStorage.removeItem('sarego_access');
+      window.location.href = '/login';
+      return;
     }
   }
 
